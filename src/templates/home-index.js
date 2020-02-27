@@ -2,7 +2,7 @@ import React from 'react';
 import { graphql } from 'gatsby';
 import Layout from '../components/Layout';
 import homePic from "../assets/home.jpg";
-import './home-index.css';
+import styles from './home-index.module.css';
 
 /**
  * 首页模板
@@ -12,13 +12,9 @@ export default ({
     data,
     location,
 }) => {
-    let className = 'bg';
-    if (window.__theme === 'dark') {
-        className += ' noBackgroundBg'
-    }
     return (
         <Layout location={location} title={data.site.siteMetadata.title}>
-            <div className={className}>
+            <div className={styles.bg}>
                 <img src={homePic}
                     style={{
                         height: 'auto',

@@ -48,7 +48,8 @@ exports.createPages = ({ graphql, actions }) => {
   });
 
   return new Promise((resolve, reject) => {
-    const blogPost = path.resolve('./src/components/BlogLayout/index.js');
+    // const blogPost = path.resolve('./src/components/BlogLayout/index.js');
+    // const blogPost = path.resolve('./src/templates/blog-post.js');
 
     // Create index pages for all supported languages
     Object.keys(supportedLanguages).forEach(langKey => {
@@ -205,12 +206,15 @@ exports.onCreateNode = ({ node, actions, getNode }) => {
   const { createNodeField } = actions;
 
   if (node.internal.type === 'Mdx') {
-    const value = createFilePath({ node, getNode });
+    // const value = createFilePath({ node, getNode });
+    const fileNode = getNode(node.parent);
+    console.log(fileNode.fields)
+
     createNodeField({
       node,
       name: 'slug',
       // TODO: The GraphQL query in the non-page component "/Users/m_liu/Documents/irismmr-blog/src/templates/blog-post-mdx.js" will not be run.
-      value,
+      value: fileNode.fields.slug,
     })
     createNodeField({
       node,
