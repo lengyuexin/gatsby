@@ -2,7 +2,7 @@ module.exports = {
   siteMetadata: {
     title: 'Irismmr',
     author: 'Iris Liu',
-    description: 'Blog by Iris Liu. Forked by Dan Abramov.',
+    description: 'Blog by Iris Liu. Using Gatsby.',
     siteUrl: 'https://irismmr.io',
     social: {
       twitter: 'none',
@@ -189,19 +189,7 @@ module.exports = {
     //       }`,
     //   },
     // },
-    {
-      resolve: `gatsby-plugin-manifest`,
-      options: {
-        name: `Overreacted`,
-        short_name: `Overreacted`,
-        start_url: `/`,
-        background_color: `#ffffff`,
-        theme_color: `#ffa7c4`,
-        display: `minimal-ui`,
-        icon: `src/assets/icon.png`,
-        theme_color_in_head: false,
-      },
-    },
+    // page metadata for SEO
     `gatsby-plugin-react-helmet`,
     {
       resolve: 'gatsby-plugin-typography',
@@ -217,5 +205,20 @@ module.exports = {
       },
     },
     `gatsby-plugin-catch-links`,
+    // PWA config
+    {
+      resolve: `gatsby-plugin-manifest`,
+      options: {
+        name: `Irismmr`,
+        short_name: `Irismmr`,
+        start_url: `/`,
+        background_color: `#ffffff`,
+        theme_color: `#ffa7c4`,
+        display: `standalone`,
+        icon: `src/assets/icon.png`, // This path is relative to the root of the site.
+        theme_color_in_head: false,
+      },
+    },
+    `gatsby-plugin-offline`,
   ],
 };

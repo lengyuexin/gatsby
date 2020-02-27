@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import { StaticQuery, graphql } from 'gatsby';
 
 const query = graphql`
-  query GetSiteMetadata {
+  query {
     site {
       siteMetadata {
         title
@@ -19,7 +19,7 @@ const query = graphql`
   }
 `;
 
-function SEO({ meta, image, title, description, slug, lang = 'en' }) {
+function SEO({ meta, image, title, description, slug, lang = 'zh-hans' }) {
   return (
     <StaticQuery
       query={query}
@@ -28,67 +28,42 @@ function SEO({ meta, image, title, description, slug, lang = 'en' }) {
         const metaDescription = description || siteMetadata.description;
         const metaImage = image ? `${siteMetadata.siteUrl}/${image}` : null;
         const url = `${siteMetadata.siteUrl}${slug}`;
+        const metaData = [
+          {
+            name: 'description',
+            content: metaDescription,
+          },
+          {
+            property: 'og:url',
+            content: url,
+          },
+          {
+            property: 'og:title',
+            content: title || siteMetadata.title,
+          },
+          {
+            property: 'og:description',
+            content: metaDescription,
+          },
+        ]
+          .concat(
+            metaImage
+              ? [
+                  {
+                    property: 'og:image',
+                    content: metaImage,
+                  }
+                ]
+              : []
+          )
+          .concat(meta);
         return (
           <Helmet
             htmlAttributes={{ lang }}
-            {...(title
-              ? {
-                  titleTemplate: `%s — ${siteMetadata.title}`,
-                  title,
-                }
-              : {
-                  title: `${siteMetadata.title} — A blog by Irismmr`,
-                })}
-            meta={[
-              {
-                name: 'description',
-                content: metaDescription,
-              },
-              {
-                property: 'og:url',
-                content: url,
-              },
-              {
-                property: 'og:title',
-                content: title || siteMetadata.title,
-              },
-              {
-                property: 'og:description',
-                content: metaDescription,
-              },
-              {
-                name: 'twitter:card',
-                content: 'summary',
-              },
-              {
-                name: 'twitter:creator',
-                content: siteMetadata.social.twitter,
-              },
-              {
-                name: 'twitter:title',
-                content: title || siteMetadata.title,
-              },
-              {
-                name: 'twitter:description',
-                content: metaDescription,
-              },
-            ]
-              .concat(
-                metaImage
-                  ? [
-                      {
-                        property: 'og:image',
-                        content: metaImage,
-                      },
-                      {
-                        name: 'twitter:image',
-                        content: metaImage,
-                      },
-                    ]
-                  : []
-              )
-              .concat(meta)}
-          />
+            >
+              <title>{title ? `${title} — ${siteMetadata.title}` : `${siteMetadata.title} — Blog`}</title>
+              {metaData.map((v, idx) => <meta name={v.name} content={v.content} key={idx} />)}
+            </Helmet>
         );
       }}
     />
