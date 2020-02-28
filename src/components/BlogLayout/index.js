@@ -57,6 +57,7 @@ class BlogLayout extends React.Component {
           title={pageContext.frontmatter.title}
           description={pageContext.frontmatter.spoiler}
           slug={slug}
+          date={pageContext.frontmatter.date}
         />
         <div style={{
           marginLeft: 'auto',

@@ -3,12 +3,10 @@ module.exports = {
     title: 'Irismmr',
     author: 'Iris Liu',
     description: 'Blog by Iris Liu. Using Gatsby.',
-    siteUrl: 'https://irismmr.io',
-    social: {
-      twitter: 'none',
-    },
+    siteUrl: 'https://irismmr.io', // Domain of your site. No trailing slash!
     keywords: 'Gatsby Mdx Blog',
-    generator: 'Gatsby React'
+    generator: 'Gatsby React',
+    defaultBanner: '/favicon.ico' // Path to your image you placed in the 'static' folder
   },
   pathPrefix: '/',
   plugins: [
