@@ -30,6 +30,18 @@ function SEO({ meta, image, title, description, slug, lang = 'zh-hans' }) {
         const url = `${siteMetadata.siteUrl}${slug}`;
         const metaData = [
           {
+            name: 'author',
+            content: siteMetadata.author,
+          },
+          {
+            name: 'keywords',
+            content: siteMetadata.keywords,
+          },
+          {
+            name: 'generator',
+            content: siteMetadata.generator,
+          },
+          {
             name: 'description',
             content: metaDescription,
           },
