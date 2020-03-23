@@ -216,7 +216,7 @@ module.exports = {
         theme_color_in_head: false,
       },
     },
-    // 基于service worker的离线支持
+    // 基于service worker的离线支持，且必须放在gatsby-plugin-manifest之后，保证可缓存manifest.webmanifest
     `gatsby-plugin-offline`,
   ],
 };
