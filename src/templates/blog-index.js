@@ -1,9 +1,9 @@
-import { Link, graphql } from 'gatsby';
-import { formatPostDate, formatReadingTime } from '../utils/helpers';
-import Layout from '../components/Layout';
-import React from 'react';
-import get from 'lodash/get';
-import { rhythm } from '../utils/typography';
+import { Link, graphql } from "gatsby"
+import { formatPostDate } from "../utils/helpers"
+import Layout from "../components/Layout"
+import React from "react"
+import get from "lodash/get"
+import { rhythm } from "../utils/typography"
 
 /**
  * 首页模板
@@ -11,35 +11,38 @@ import { rhythm } from '../utils/typography';
  */
 class BlogIndexTemplate extends React.Component {
   render() {
-    const siteTitle = get(this, 'props.data.site.siteMetadata.title');
-    const langKey = this.props.pageContext.langKey;
+    const siteTitle = get(this, "props.data.site.siteMetadata.title")
+    const langKey = this.props.pageContext.langKey
 
-    const posts = this.props.data.allMdx.edges;
+    const posts = this.props.data.allMdx.edges
 
     return (
       <Layout location={this.props.location} title={siteTitle}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          flexDirection: 'column'
-        }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            flexDirection: "column",
+          }}
+        >
           <main>
             {posts.map(({ node }) => {
-              const title = get(node, 'frontmatter.title') || get(node, 'fields.slug');
-              console.log(node.timeToRead)
+              const title =
+                get(node, "frontmatter.title") || get(node, "fields.slug")
+
               return (
-                <article key={get(node, 'fields.slug')}>
+                <article key={get(node, "fields.slug")}>
                   <header>
                     <h3
                       style={{
-                        fontFamily: 'Montserrat, sans-serif',
+                        fontFamily: "Montserrat, sans-serif",
                         fontSize: rhythm(1),
                         marginBottom: rhythm(1 / 4),
                       }}
                     >
                       <Link
-                        style={{ boxShadow: 'none' }}
-                        to={get(node, 'fields.slug')}
+                        style={{ boxShadow: "none" }}
+                        to={get(node, "fields.slug")}
                         rel="bookmark"
                       >
                         {title}
@@ -47,23 +50,24 @@ class BlogIndexTemplate extends React.Component {
                     </h3>
                     <small>
                       {formatPostDate(node.frontmatter.date, langKey)}
-                      {` • ${formatReadingTime(node.timeToRead)}`}
                     </small>
                   </header>
                   <p
-                    dangerouslySetInnerHTML={{ __html: node.frontmatter.spoiler }}
+                    dangerouslySetInnerHTML={{
+                      __html: node.frontmatter.spoiler,
+                    }}
                   />
                 </article>
-              );
+              )
             })}
           </main>
         </div>
       </Layout>
-    );
+    )
   }
 }
 
-export default BlogIndexTemplate;
+export default BlogIndexTemplate
 
 export const pageQuery = graphql`
   query($langKey: String!) {
@@ -73,7 +77,7 @@ export const pageQuery = graphql`
         description
       }
     }
-    allMdx (
+    allMdx(
       filter: { fields: { langKey: { eq: $langKey } } }
       sort: { fields: [frontmatter___date], order: DESC }
     ) {
@@ -82,15 +86,13 @@ export const pageQuery = graphql`
           frontmatter {
             date(formatString: "MMMM DD, YYYY")
             title
-            path
           }
           fields {
             slug
             langKey
           }
-          timeToRead
         }
       }
     }
   }
-`;
+`

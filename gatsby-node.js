@@ -1,29 +1,27 @@
-const _ = require('lodash');
-const Promise = require('bluebird');
-const path = require('path');
-const { supportedLanguages } = require('./i18n');
+const _ = require("lodash")
+const Promise = require("bluebird")
+const path = require("path")
+const { supportedLanguages } = require("./i18n")
 const { createFilePath } = require("gatsby-source-filesystem")
 
-const translationsByDirectory = (posts) => {
+const translationsByDirectory = posts => {
   return _.reduce(
     posts,
     (result, post) => {
-      const directoryName = _.get(post, 'node.fields.directoryName');
-      const langKey = _.get(post, 'node.fields.langKey');
-      if (directoryName && langKey && langKey !== 'zh-hans') {
-        (result[directoryName] || (result[directoryName] = [])).push(
-          langKey
-        );
+      const directoryName = _.get(post, "node.fields.directoryName")
+      const langKey = _.get(post, "node.fields.langKey")
+      if (directoryName && langKey && langKey !== "zh-hans") {
+        ;(result[directoryName] || (result[directoryName] = [])).push(langKey)
       }
 
-      return result;
+      return result
     },
     {}
-  );
-};
+  )
+}
 
 exports.createPages = ({ graphql, actions }) => {
-  const { createPage } = actions;
+  const { createPage } = actions
 
   return new Promise((resolve, reject) => {
     // const blogPost = path.resolve('./src/components/BlogLayout/index.js');
@@ -32,20 +30,20 @@ exports.createPages = ({ graphql, actions }) => {
     // Create index pages for all supported languages
     Object.keys(supportedLanguages).forEach(langKey => {
       createPage({
-        path: langKey === 'zh-hans' ? '/' : `/${langKey}/`,
-        component: path.resolve('./src/templates/home-index.js'),
+        path: langKey === "zh-hans" ? "/" : `/${langKey}/`,
+        component: path.resolve("./src/templates/home-index.js"),
         context: {
           langKey,
         },
-      });
+      })
       createPage({
-        path: langKey === 'zh-hans' ? '/blog' : `/${langKey}/blog`,
-        component: path.resolve('./src/templates/blog-index.js'),
+        path: langKey === "zh-hans" ? "/blog" : `/${langKey}/blog`,
+        component: path.resolve("./src/templates/blog-index.js"),
         context: {
           langKey,
         },
-      });
-    });
+      })
+    })
 
     resolve(
       graphql(
@@ -56,7 +54,7 @@ exports.createPages = ({ graphql, actions }) => {
                 node {
                   frontmatter {
                     title
-                    path
+                    date
                   }
                   fields {
                     slug
@@ -70,9 +68,9 @@ exports.createPages = ({ graphql, actions }) => {
         `
       ).then(result => {
         if (result.errors) {
-          console.log(result.errors);
-          reject(result.errors);
-          return;
+          console.log(result.errors)
+          reject(result.errors)
+          return
         }
 
         // // Create blog posts pages.
@@ -108,7 +106,7 @@ exports.createPages = ({ graphql, actions }) => {
         // const defaultLangPosts = posts.filter(
         //   ({ node }) => node.fields.langKey === 'zh-hans'
         // );
-        
+
         // const postTranslationsByDirectory = translationsByDirectory(posts);
 
         // _.each(defaultLangPosts, (post, index) => {
@@ -176,33 +174,33 @@ exports.createPages = ({ graphql, actions }) => {
         //   });
         // });
       })
-    );
-  });
-};
+    )
+  })
+}
 
 exports.onCreateNode = ({ node, actions, getNode }) => {
-  const { createNodeField } = actions;
+  const { createNodeField } = actions
 
-  if (node.internal.type === 'Mdx') {
+  if (node.internal.type === "Mdx") {
     // const value = createFilePath({ node, getNode });
-    const fileNode = getNode(node.parent);
+    const fileNode = getNode(node.parent)
     console.log(fileNode.fields)
 
     createNodeField({
       node,
-      name: 'slug',
+      name: "slug",
       // TODO: The GraphQL query in the non-page component "/Users/m_liu/Documents/irismmr-blog/src/templates/blog-post-mdx.js" will not be run.
       value: fileNode.fields.slug,
     })
     createNodeField({
       node,
-      name: 'langKey',
-      value: node.frontmatter.langKey || 'zh-hans',
+      name: "langKey",
+      value: node.frontmatter.langKey || "zh-hans",
     })
     createNodeField({
       node,
-      name: 'directoryName',
-      value: path.basename(path.dirname(_.get(node, 'fileAbsolutePath'))),
-    });
+      name: "directoryName",
+      value: path.basename(path.dirname(_.get(node, "fileAbsolutePath"))),
+    })
   }
-};
+}

@@ -1,7 +1,11 @@
 .bg {
-    /* background: url(../assets/spiration-light.png); */
-    display: flex;
-    align-items: center;
-    flex-direction: row;
-    padding: 60px 0;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  padding: 60px 0;
+}
+
+.text {
+  color: var(--textNormal);
+  font-size: 1vw;
 }

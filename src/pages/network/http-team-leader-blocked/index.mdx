@@ -1,0 +1,43 @@
+---
+title: 'http队头阻塞'
+date: '2020-12-20'
+spoiler: http队头阻塞
+---
+
+import Panel from '../../../components/Panel.js'
+
+## 成因
+
+<Panel style={{background:'lightblue'}}>
+  HTTP传输是基于请求-响应模式，报文必须是一发一收。
+  每个请求都在一个队列中维护，先进先出。
+  如果队首的请求处理太慢，就会阻塞后面请求的处理。
+  由此，就此形成了队头阻塞。
+ </Panel>   
+
+
+## 解决方案
+
+
+**域名分片**
+
+<Panel>
+    增加多个域名，每个域名一次最多六个tcp连接，理论上支持的最大并发tcp连接数是6n
+ </Panel>   
+
+
+
+**http/2多路复用**
+
+<Panel>
+将报文转成具有id标识的二进制数据帧，接收后按照id组合成完整报文,全过程在同一个tcp连接上完成双向数据帧传输
+</Panel> 
+
+
+## 注意
+
+
+<Panel style={{background:'pink'}}>
+以上解决方案都是针对应用层，不是传输层(tcp)。tcp层面的队头阻塞是如果前一个报文没有收到便不会将后面收到的报文上传给 HTTP。
+根本上解决需要更换协议，如换成udp。
+</Panel> 

@@ -1,0 +1,98 @@
+---
+title: 'http-proxy'
+date: '2020-12-20'
+spoiler: http-proxy
+---
+
+import P from '../../../components/Panel.js'
+
+
+
+### 代理转发
+
+<P> 
+访问3000端口，会被转发到5000端口，页面显示port 5000
+</P>
+
+
+**服务a**
+
+```js
+const app = require('http')
+const httpProxy = require('http-proxy')
+const proxy=httpProxy.createProxyServer()
+app.createServer((req, res) => {
+    proxy.web(req,res,{
+        target:'http://localhost:5000'
+    })
+}).listen(3000, () => {
+    console.log('run server 3000 ')
+})
+```
+
+**服务b**
+
+```js
+const app = require('http')
+app.createServer((req, res) => {
+    res.end('port 5000')
+}).listen(5000, () => {
+    console.log('run server')
+})
+```
+
+
+### 模拟nginx反向代理
+
+<P> 
+监听同一个端口，根据上下文，分发到不同的服务上。<br/>
+代理机和两台服务分别跑在8080，3000，3001端口。<br/>
+访问:http://localhost:8080/server/1 页面显示==>server1<br/>
+访问:http://localhost:8080/server/2 页面显示==>server2<br/>
+</P>
+
+
+
+
+**代理机proxy**
+
+```js
+const app = require('http')
+const httpProxy = require('http-proxy')
+const url = require('url')
+const proxy = httpProxy.createProxyServer()
+//代理路径映射 相当于nginx的 proxy_pass
+const map = {
+    '/server/1': 'http://localhost:3000',
+    '/server/2': 'http://localhost:3001',
+}
+app.createServer((req, res) => {
+    const {pathname} =url.parse(req.url)
+    if (pathname === '/favicon.ico') return res.end()
+    proxy.web(req, res, {
+        target: map[pathname]
+    })
+}).listen(8080, () => {
+    console.log('run server 8080 ')
+})
+```
+
+**服务机1**
+
+```js
+const app = require('http')
+app.createServer((req, res) => {
+    res.end('server1')
+}).listen(3000)
+```
+
+**服务机2**
+
+```js
+
+const app = require('http')
+app.createServer((req, res) => {
+    res.end('server2')
+}).listen(3001)
+```
+

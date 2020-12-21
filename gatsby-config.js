@@ -1,27 +1,27 @@
 module.exports = {
   siteMetadata: {
-    title: 'Irismmr',
-    author: 'Iris Liu',
-    description: 'Blog by Iris Liu. Using Gatsby.',
-    siteUrl: 'https://irismmr.io', // Domain of your site. No trailing slash!
-    keywords: 'Gatsby Mdx Blog',
-    generator: 'Gatsby React',
-    defaultBanner: '/favicon.ico' // Path to your image you placed in the 'static' folder
+    title: "lengyuexin",
+    author: "lengyuexin",
+    description: "Blog by lengyuexin. Using Gatsby.",
+    siteUrl: "https://lengyuexin.gitee.io", // Domain of your site. No trailing slash!
+    keywords: "Gatsby Mdx Blog",
+    generator: "Gatsby React",
+    defaultBanner: "/favicon.ico", // Path to your image you placed in the 'static' folder
   },
-  pathPrefix: '/',
+  pathPrefix: "/",
   plugins: [
     {
       resolve: `gatsby-source-filesystem`,
       options: {
         path: `${__dirname}/src/assets`,
-        name: 'assets',
+        name: "assets",
       },
     },
     {
       resolve: `gatsby-source-filesystem`,
       options: {
         path: `${__dirname}/src/pages`,
-        name: 'pages',
+        name: "pages",
       },
     },
     {
@@ -29,8 +29,8 @@ module.exports = {
       options: {
         extensions: [`.mdx`, `.md`],
         defaultLayouts: {
-          post: require.resolve('./src/components/BlogLayout/index.js'),
-          default: require.resolve('./src/components/BlogLayout/index.js'),
+          post: require.resolve("./src/components/BlogLayout/index.js"),
+          default: require.resolve("./src/components/BlogLayout/index.js"),
         },
         gatsbyRemarkPlugins: [
           // {
@@ -75,8 +75,8 @@ module.exports = {
           //     target: '_blank',
           //   },
           // },
-        ]
-      }
+        ],
+      },
     },
     `gatsby-transformer-sharp`,
     `gatsby-plugin-sharp`,
@@ -104,21 +104,21 @@ module.exports = {
         feeds: [
           {
             serialize: ({ query: { site, allMdx } }) => {
-              const siteUrl = site.siteMetadata.siteUrl;
+              const siteUrl = site.siteMetadata.siteUrl
               return allMdx.edges.map(edge => {
                 const postText = `
                 <div style="margin-top=55px; font-style: italic;">(来自irismmr.io <a href="${siteUrl +
                   edge.node.fields.slug}">点击</a>去网上阅读.)</div>
-              `;
-                let body = edge.node.rawBody;
+              `
+                let body = edge.node.rawBody
                 return Object.assign({}, edge.node.frontmatter, {
                   description: edge.node.frontmatter.spoiler,
                   date: edge.node.frontmatter.date,
                   url: site.siteMetadata.siteUrl + edge.node.fields.slug,
                   guid: site.siteMetadata.siteUrl + edge.node.fields.slug,
-                  custom_elements: [{ 'content:encoded': body + postText }],
-                });
-              });
+                  custom_elements: [{ "content:encoded": body + postText }],
+                })
+              })
             },
             query: `
               {
@@ -147,8 +147,8 @@ module.exports = {
                 }
               }
             `,
-            output: '/rss.xml',
-            title: "Irismmr's Blog RSS Feed",
+            output: "/rss.xml",
+            title: "lengyuexin's Blog RSS Feed",
           },
         ],
       },
@@ -189,16 +189,16 @@ module.exports = {
     `gatsby-plugin-react-helmet`,
     // typography样式主题
     {
-      resolve: 'gatsby-plugin-typography',
+      resolve: "gatsby-plugin-typography",
       options: {
-        pathToConfigModule: 'src/utils/typography',
+        pathToConfigModule: "src/utils/typography",
       },
     },
     // 多语言
     {
-      resolve: 'gatsby-plugin-i18n',
+      resolve: "gatsby-plugin-i18n",
       options: {
-        langKeyDefault: 'zh-hans',
+        langKeyDefault: "zh-hans",
         useLangKeyLayout: false,
       },
     },
@@ -206,8 +206,8 @@ module.exports = {
     {
       resolve: `gatsby-plugin-manifest`,
       options: {
-        name: `Irismmr`,
-        short_name: `Irismmr`,
+        name: `lengyuexin`,
+        short_name: `lengyuexin`,
         start_url: `/`,
         background_color: `#ffffff`,
         theme_color: `#ffa7c4`,
@@ -219,4 +219,4 @@ module.exports = {
     // 基于service worker的离线支持，且必须放在gatsby-plugin-manifest之后，保证可缓存manifest.webmanifest
     `gatsby-plugin-offline`,
   ],
-};
+}
