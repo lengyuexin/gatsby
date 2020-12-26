@@ -17,6 +17,8 @@ import P from '../../../components/Panel.js'
 
 **服务a**
 
+<P style={{background:'#FDB99B'}}>
+
 ```js
 const app = require('http')
 const httpProxy = require('http-proxy')
@@ -30,17 +32,23 @@ app.createServer((req, res) => {
 })
 ```
 
+</P>
+
+
+
+
 **服务b**
 
-```js
-const app = require('http')
-app.createServer((req, res) => {
-    res.end('port 5000')
-}).listen(5000, () => {
-    console.log('run server')
-})
-```
+<P style={{background:'#FDB99B'}}>
 
+const app = require('http')<br/>
+app.createServer((req, res) => {<br/>
+    res.end('port 5000')<br/>
+}).listen(5000, () => {<br/>
+    console.log('run server')<br/>
+})
+
+</P>
 
 ### 模拟nginx反向代理
 
@@ -55,6 +63,9 @@ app.createServer((req, res) => {
 
 
 **代理机proxy**
+
+
+
 
 ```js
 const app = require('http')

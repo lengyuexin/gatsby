@@ -80,10 +80,11 @@ export default ({ location, themeToggle: onThemeToggle, theme }) => {
     },
     {
       name: (
+        /* eslint-disable */
+
         <div
           onClick={onThemeToggle}
           style={{
-            //eslint-disable-line
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
@@ -117,7 +118,7 @@ export default ({ location, themeToggle: onThemeToggle, theme }) => {
       path: "",
     },
   ]
-
+  /* eslint-enable */
   return (
     <div
       style={{

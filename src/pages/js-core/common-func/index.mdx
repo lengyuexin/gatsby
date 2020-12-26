@@ -1,0 +1,162 @@
+---
+title: js常用工具函数
+date: '2020-12-22'
+spoiler: js常用工具函数
+---
+
+import P from '../../../components/Panel.js'
+
+## 防抖
+
+<P style={{background:'#FDB99B'}}>
+
+```js
+const debounce = (fn, wait) => {
+    let timer = null
+    return (...args) => {
+        clearTimeout(timer)
+        timer = setTimeout(() => {
+            fn(...args)
+        }, wait)
+
+    }
+}
+```
+</P>
+
+## 节流
+
+<P style={{background:'#FDB99B'}}>
+
+```js
+const throttle = (fn, wait) => {
+    let lock = false
+    return (...args) => {
+        if (lock) return
+        lock = true
+        setTimeout(() => {
+            fn(...args)
+            lock = false
+        }, wait)
+    }
+}
+```
+</P>
+
+## 防抖+节流
+
+<P style={{background:'#FDB99B'}}>
+
+```js
+const handle=(fn, delay)=> {
+    let last = 0, timer = null;
+    return (...args) => {
+        let now = new Date();
+        if (now - last < delay) {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                last = now;
+                fn(...args);
+            }, delay);
+        } else {
+            last = now;
+            fn(...args);
+        }
+    }
+}
+```
+
+</P>
+
+## 图片懒加载
+
+<P style={{background:'#FDB99B'}}>
+
+```js
+
+// 获取所有的图片标签
+var imgs = document.getElementsByTagName('img')
+// 获取可视区域的高度
+var clientHeight = document.documentElement.clientHeight
+// num用于统计当前显示到了哪一张图片，避免重复加载
+var num = 0
+function lazyload() {
+    for (let i = num; i < imgs.length; i++) {
+
+        // 可视区域高度>=元素顶部距离可视区域顶部的高度 ,显示图片
+        if (clientHeight >= imgs[i].getBoundingClientRect().top) {
+            // 地址替换 
+            imgs[i].src = imgs[i].getAttribute('data-src');
+            // 更新num
+            num += 1;
+        }
+    }
+}
+
+//初始化
+lazyload();
+
+```
+</P>
+
+
+## 图片预加载
+
+<P style={{background:'#FDB99B'}}>
+
+```js
+
+function preload() {
+    const img = document.querySelector("img")
+  
+    //定义图片加载数量
+    let count = 0;
+    //定义当前图片数组长度
+    const len = imgs.length;
+    //遍历图片数组，引入预加载处理
+    imgs.forEach(item => {
+        /*代理模式体现--start*/
+        const imgObj = new Image();
+        //使用imgObj模拟真实img完成加载
+        imgObj.onload = () => {
+            //所有图片加载完成，将loading替换成第一张图
+            if (count === len - 1) {
+                img.src = imgs[0];
+            }
+            // 每张图片加载完成，count+1
+            count++
+        }
+        //使用imgObj模拟真实img发起请求
+        imgObj.src = item;
+        /*代理模式体现--end*/
+    })
+}
+
+
+```
+</P>
+
+## 深拷贝
+
+<P style={{background:'#FDB99B'}}>
+
+```js
+
+function clone(target, map = new Map()) {
+    if (typeof target === 'object') {
+        let cloneTarget = Array.isArray(target) ? [] : {};
+        if (map.get(target)) {
+            return map.get(target);
+        }
+        map.set(target, cloneTarget);
+        for (const key in target) {
+            cloneTarget[key] = clone(target[key], map);
+        }
+        return cloneTarget;
+    } else {
+        return target;
+    }
+};
+```
+
+</P>

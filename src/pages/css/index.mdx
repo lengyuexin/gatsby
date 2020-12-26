@@ -1,0 +1,158 @@
+---
+title: 'css垂直居中'
+date: '2020-12-26'
+spoiler: css垂直居中
+---
+
+import P from '../../components/Panel.js'
+
+
+
+
+## html布局
+
+<P style={{background:'#FDB99B'}}>
+
+```html
+<div class="father">
+   <div class="child">child</div>
+</div>
+```
+</P>
+
+## 定位:方法一
+
+
+<P style={{background:'lightblue'}}>
+绝对定位的子盒子相对父盒子定位，设置left，top为50%，子盒子左上角会在父盒子内水平垂直居中。
+此时，再让左边距上边距偏离宽高的一半，则可使整个子盒子在父盒子内水平垂直居中。
+这种方法的局限性是必须事先清楚子盒子的宽和高,因为涉及margin-left和margin-top的计算。
+</P>
+
+
+```css
+
+.father{
+  /* 关键代码 start*/
+  position: relative;
+  /* 关键代码 end*/
+  width:400px;
+  height:400px;
+  background-color:#333;
+  margin: 100px auto;
+}
+
+.child{
+    background-color: #fff;
+    /* 关键代码 start*/
+    position: absolute;
+    width:100px;
+    height:100px;
+    left:50%;
+    top:50%;
+    margin-left:-50px;
+    margin-top:-50px;
+    /* 关键代码 end*/
+}
+
+```
+
+
+
+
+![定位:方法一](https://img-blog.csdnimg.cn/2020050710423273.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+## 定位:方法二
+
+<P style={{background:'lightblue'}}>
+绝对定位的子盒子相对父盒子定位，设置left，top,right,bottom为0，子盒子在父盒子左上角显示。
+此时，再让margin自适应，则可使整个子盒子在父盒子内水平垂直居中。
+这种方法的局限性是必须设置子盒子的宽和高，尽管不用于计算。
+ </P>
+
+
+
+```css
+
+.child{
+    background-color: #fff;
+    /* 关键代码 start*/
+    width:100px;
+    height:100px;
+    position: absolute;
+    left:0;
+    top:0;
+    right:0;
+    bottom:0;
+    margin:auto;
+    /* 关键代码 end*/
+}
+
+```
+
+
+
+![定位:方法二](https://img-blog.csdnimg.cn/2020050710423273.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+## 定位:方法三
+
+<P style={{background:'lightblue'}}>
+绝对定位的子盒子相对父盒子定位，设置left，top为50%，子盒子左上角会在父盒子内水平垂直居中。
+此时，设置translate使其沿着XY轴偏移自身宽高的一半。
+好处是不需要设置宽高，局限是存在兼容问题。
+ </P>
+
+
+```css
+
+.child{
+    background-color: #fff;
+    /* 关键代码 start*/
+    position: absolute;
+    left:50%;
+    top:50%;
+    transform: translate(-50%,-50%);
+    /* 关键代码 end*/
+}
+
+```
+
+
+
+
+
+![定位:方法三](https://img-blog.csdnimg.cn/20200507104607419.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+
+## flex
+
+<P style={{background:'lightblue'}}>
+将父盒子转为flex布局，设置主轴和侧轴元素居中对齐，则子盒子在父盒子中水平垂直居中。
+局限性是存在兼容问题，好处是灵活简单。
+ </P>
+
+
+```css
+.father{
+  width:400px;
+  height:400px;
+  background-color:#333;
+  margin: 100px auto;
+  /* 关键代码 start*/
+  display:flex;
+  justify-content: center;
+  align-items: center;
+  /* 关键代码 end*/
+}
+.child{
+    background-color: #fff;
+}
+```
+
+
+
+![flex](https://img-blog.csdnimg.cn/20200507104607419.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+

@@ -1,0 +1,90 @@
+---
+title: 原型和原型链
+date: '2020-12-22'
+spoiler: 原型和原型链
+---
+
+import P from '../../../components/Panel.js'
+
+## 核心概念
+
+原型相关概念：构造函数，原型对象，实例对象
+
+<P style={{background:'#FDB99B'}}>
+
+```js
+function Person() { }
+var p = new Person()
+//  上述代码 构造函数就是Person,原型对象是Person.prototype,实例对象是p
+//  三者关系是
+// new Person =>得到实例对象
+// 实例对象p的constructor属性指向该构造函数Person 
+// p.constructor===Person true
+// 实例对象p的属性__proto__  指向 Person.prototype  
+// p.__proto__===Person.prototype true
+// 原型对象Person.prototype的constructor属性指向构造函数 
+// Person Person.prototype.constructor===Person true
+// 构造函数Person的prototype属性指向Person.prototype
+//  每一个实例的__proto__ 都会对应一个原型对象
+//  而这个原型对对象也是某个构造函数的实例
+//  由此构成一条完整的原型链
+//  一直到Object.prototype 它的 __proto__属性为null
+p.__proto__ === Person.prototype// true
+p.__proto__.__proto__ === Object.prototype// true
+Object.prototype.__proto__ === null // true
+```
+
+</P>
+
+
+
+## 实现一个new 操作符
+
+
+<P style={{background:'#FDB99B'}}> 
+
+```js
+function mynew(fn, ...args) {
+    var obj = Object.create(fn.prototype)
+    var res = fn.apply(obj, args)
+    return res instanceof Object ? res : obj;
+}
+```
+
+</P>
+
+## 实现一个object.create
+
+
+<P style={{background:'#FDB99B'}}>
+
+```js
+function create(proto) {
+    function F() { }
+    F.prototype = proto
+    return new F()
+
+}
+```
+
+</P>
+
+
+## 实现一个instanceof
+
+
+<P style={{background:'#FDB99B'}}>
+
+```js
+function myinstanceof(instance, constructor) {
+
+    while (instance) {
+        if (instance === constructor.prototype) return true
+        instance = instance.__proto__
+    }
+    return false
+}
+```
+
+
+</P>

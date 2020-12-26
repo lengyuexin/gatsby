@@ -1,0 +1,58 @@
+---
+title: flat数组扁平化
+date: '2020-12-22'
+spoiler: flat数组扁平化
+---
+
+
+
+import P from '../../../components/Panel.js'
+
+
+
+### 原生flat
+
+
+<P style={{background:'#FDB99B'}}>
+
+```js
+let ary = [1, [2, [3, [4, 5]]], 6];// -> [1, 2, 3, 4, 5, 6]
+ary = ary.flat(Infinity);
+```
+</P>
+
+
+### replace+split+map
+
+<P style={{background:'#FDB99B'}}>
+
+```js
+let ary = [1, [2, [3, [4, 5]]], 6];// -> [1, 2, 3, 4, 5, 6]
+let str = JSON.stringify(ary);
+str.replace(/\[|\]/g, '').split(',').map(item=>+item)
+```
+</P>
+
+
+
+
+
+### 递归
+
+
+<P style={{background:'#FDB99B'}}>
+
+```js
+let result = [];
+let fn = function(ary) {
+  for(let i = 0; i < ary.length; i++) {
+    let item = ary[i];
+    if (Array.isArray(ary[i])){
+      fn(item);
+    } else {
+      result.push(item);
+    }
+  }
+}
+```
+</P>

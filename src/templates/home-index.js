@@ -31,7 +31,7 @@ export default ({ data, location }) => {
             <img
               src={homePic}
               alt="微信公众号:前端前端大前端"
-              title="微信公众号:前端前端大前端"
+              title="佛系更新-微信公众号:前端前端大前端"
             />
           </p>
 

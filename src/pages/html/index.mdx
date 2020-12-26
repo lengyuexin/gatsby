@@ -1,0 +1,465 @@
+---
+title: 'html基础'
+date: '2020-12-26'
+spoiler: html基础
+---
+
+import P from '../../components/Panel.js'
+
+
+
+## 文档类型声明
+
+<P>
+DOCTYPE是标准通用标记语言的文档类型声明，
+由于网络上文件的类型不一，
+因此需要正确声明 HTML 版本,
+以使得浏览器能够正确识别并显示网页内容。
+</P>
+
+> 
+
+**doctype声明不区分大小写,以下形式皆可**
+
+```html
+<!DOCTYPE html>
+<!DOCTYPE HTML>
+<!doctype html>
+<!Doctype Html>
+
+```
+
+**有代表性的<!DOCTYPE>声明**
+
+```html
+HTML5时期
+<!DOCTYPE html> 
+
+HTML 4.01 时期
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"      
+"http://www.w3.org/TR/html4/loose.dtd"> 
+
+XHTML 1.0 时期
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"     
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
+```
+
+
+
+## html5新特性
+
+### 语义化标签
+
+<P>语义化标签是为了让代码看起来更见名知义，语义清晰，本质上只是一个普通的div。</P>
+
+|         |                                          |
+| ------- | ---------------------------------------- |
+| 标签    | 语义                                     |
+| header  | 头部                                     |
+| footer  | 尾部                                     |
+| section | 区段                                     |
+| article | 文章                                     |
+| nav     | 导航                                     |
+| aside   | 侧边栏                                   |
+| main    | 文章主体内容                             |
+| figure  | 独立的流内容(图像、图表、照片、代码等等) |
+| hgroup  | 对网页或区段（section）的标题进行组合    |
+|details/summary| 标签用于描述文档或文档某个部分的细节 |
+|mark|突出显示部分文本|
+
+
+<P style={{background:'#FDB99B'}}>
+
+在一个文档中，不能出现一个以上的 main元素,且main不能是以下元素的后代：article/aside/footer/header/nav <br/>
+最后4个用的可能少一些，这里补充说明一下
+```html
+<figure>
+  <p>avatar</p>
+  <img src="url"/>
+</figure>
+
+hgroup可以拆开理解，h是标题的语义，group是组合，hgroup自然就是对标题进行组合
+<hgroup>
+  <h1>前端</h1>
+  <h2>HTML</h2>
+</hgroup>
+
+默认关闭子项，点击展开，再点击收起
+<details>
+    <summary>详情</summary>
+    <p>hello world</p>
+    <p>hello girl</p>
+</details>
+<p>这是<mark>突出显示</mark>的部分</p>
+```
+
+</P>
+
+### 表单的丰富(部分属性需要在form标签包裹下才会生效)
+
+
+**常规**
+
+```html
+<form >
+    <!--默认包含正则验证，验证失败表单无法提交-->
+    邮箱： <input type="email">
+
+    <!-- 自动聚焦and占位符 -->
+    输入框：<input type="text" placeholder="请输入" autofocus="true">
+
+    <!--tel本身不包含验证，它的出现是为了能够在移动端打开数字键盘-->
+    <!--required，必须输入 pattern，正则验证-->
+    电话：<input type="tel" required pattern="^(\+86)?1\d{10}$">
+
+    <!--验证只能输入合法的网址：如http://www.baidu.com-->
+    网址：<input type="url">
+
+    <!--number：只能输入数字(包含小数点)，
+    不能输入其它的字符 max:最大值 min:最小值 value:默认值-->
+    数量：<input type="number" value="70" max="100" min="0">
+
+    <!--search：可以提供更人性化的输入体验，有个x号，不想要了可以删除-->
+    请输入商品名称：<input type="search">
+
+    <!--range:范围，与number类似-->
+    范围：<input type="range" max="100" min="0" value="50">
+
+     <!--可以当个拾色器-->
+    颜色：<input type="color">
+   
+    <!--time:时间：时分秒-->
+    时间：<input type="time">
+
+    <!--date：日期：年月日-->
+    日期：<input type="date">
+
+    <!--datetime:大多数浏览器不能支持datetime.用于屏幕阅读器-->
+    日期时间：<input type="datetime">
+
+    <!--datetime-local:日期和时间-->
+    日期时间：<input type="datetime-local">
+    月份：<input type="month">
+    星期：<input type="week">
+  
+</form>
+```
+
+**默认为true的属性**
+
+```html
+<input type="text" autofocus>
+<input type="text" disabled>
+<input type="checkbox" checked>
+
+```
+**新增datalist标签**
+
+> 不同浏览器表现会有些许差异，感兴趣的可以试试
+
+
+```html
+ <!--建立输入框与datalist的关联  list="datalist的id号"-->
+ 编程语言：<input type="text" list="language"> <br>
+ <!--通过datalist创建下拉列表-->
+ <datalist id="language">
+     <!--label:提示信息-->
+     <option value="java" label="老牌编程语言"/>
+     <option value="php" label="世界上最好的语言"></option>
+     <option value="node.js" label="强大的IO处理能力"></option>
+      <!--option可以是单标签也可以是双标签-->
+     <option value="python" label="火爆的编程语言，处理数据能力强"/>
+ </datalist>
+
+```
+
+**新增meter标签**
+
+> 不同浏览器显示有差异
+
+```html
+<!--high:规定的较高的值,low:规定的较低的值,max:最大值,min:最小值,value:当前度量值-->
+<meter max="100" min="0" high="80" low="40" value="30"></meter>
+<meter max="100" min="0" high="80" low="40" value="60"></meter>
+<meter max="100" min="0" high="80" low="40" value="100"></meter>
+
+```
+![meter](https://img-blog.csdnimg.cn/20190325090209752.png)
+
+
+**新增fieldset和legend标签**
+
+```html
+	<fieldset>
+        <legend>冷月心个人信息</legend>
+    </fieldset>
+
+```
+
+
+![fieldset和legend标签](https://img-blog.csdnimg.cn/20190325090609784.png)
+
+
+
+**新增progress标签**
+
+```html
+<progress value="22" max="100"></progress>
+```
+
+
+
+![progress](https://img-blog.csdnimg.cn/20200323105620203.png)
+
+
+
+**form表单提交按钮属性**
+
+<P>
+formaction  指定提交按钮的地址<br/>
+formtarget 类似a标签的target<br/>
+formmethod 指定表单提交方式<br/>
+formenctype 表单提交时的编码格式
+</P>
+
+
+| application/x-www-form-urlencoded | 在发送前对所有字符进行编码（默认）。                       |
+| --------------------------------- | ---------------------------------------------------------- |
+| multipart/form-data               | 不对字符编码。当使用有文件上传控件的表单时，该值是必需的。 |
+| text/plain                        | 将空格转换为 "+" 符号，但不编码特殊字符。                  |
+
+
+
+
+
+**其他**
+
+<P>
+control 属性，在lable标签内部放置一个表单元素，并通过该属性来访问该表单的属性<br/>
+autocomplete，控制表单提交后是否生成历史记录 on|off
+</P>
+
+
+
+
+
+
+
+
+
+
+### 自定义属性规范
+
+
+<P>
+小写，非纯数字，不含特殊字符<br/>
+data开头,data-后必须至少有一个字符，多个单词使用-连接<br/>
+示例: data-name， data-project-name
+</P>
+
+
+
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>自定义属性</title>
+</head>
+<body>
+<p data-user-name="冷月心"></p>
+<script>
+        const p=document.querySelector("p");
+        //必须驼峰法取值
+        console.log(p.dataset["userName"]);//冷月心
+</script>
+</body>
+</html>
+
+
+```
+
+
+
+
+
+### 拖放
+
+
+<P>
+draggable设置元素是否可拖放，img标签默认为true<br/>
+ondragstart 开始拖放事件监听，存储数据<br/>
+ondrop 放下事件，获取ondragstart 时存储的数据并添加到目标元素<br/>
+ondragover 拖动结束事件，用于清除默认行为，否则无法实现拖放
+</P>
+
+
+
+
+
+
+
+
+**网页资源拖放**
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>html5拖放</title>
+    <style>
+        div {
+            float: left;
+            width: 300px;
+            height: 300px;
+            border: 1px solid #aaa;
+            margin: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <p>拖拽图片至div</p>
+    <div ondrop="drop(event)" ondragover="allowDrop(event)">
+    </div>
+    <div ondrop="drop(event)" ondragover="allowDrop(event)">
+    </div>
+    <br />
+    <img id="img" 
+    src="https://img-blog.csdnimg.cn/20200323112521943.jpg" 
+    draggable="true" ondragstart="drag(event)" />
+
+</body>
+<script type="text/javascript">
+    function allowDrop(ev) {
+        ev.preventDefault();
+    }
+
+    function drag(ev) {
+        ev.dataTransfer.setData("img", ev.target.id);
+    }
+
+    function drop(ev) {
+        var data = ev.dataTransfer.getData("img");
+        ev.target.appendChild(document.getElementById(data));
+    }
+</script>
+
+</html>
+```
+
+
+
+
+
+
+
+**本地资源拖放**
+
+
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>html5拖放</title>
+</head>
+<body>
+    <p>拖拽本地图片至当前页面</p>
+</body>
+<script type="text/javascript">
+
+    document.ondragover = function (ev) {
+        ev.preventDefault();
+    }
+
+    document.ondrop = function (ev) {
+        ev.preventDefault();//默认会以链接打开
+        var file = ev.dataTransfer.files[0];
+        var fileReader = new FileReader();
+        fileReader.onload = function () {
+            var img = new Image();
+            img.src = fileReader.result;
+            document.body.appendChild(img);
+        }
+        fileReader.readAsDataURL(file)
+    }
+</script>
+</html>
+```
+
+
+
+
+### web worker
+
+
+<P>
+web worker 是独立运行在后台的js脚本，不影响页面性能，常用于处理耗时的逻辑。
+值得注意的是，出于安全性考虑，浏览器对本地运行web worker有限制，需运行在服务器上。
+
+</P>
+
+**使用案例**
+
+
+
+1. 新建count.js，内部执行一个耗时的逻辑
+2. count.js 内部使用postMessage发送运行后的结果
+
+
+```js
+var arr = Array.from(new Array(10000).keys());
+var sum = 0;
+arr.forEach(item => {
+    sum += item;
+})
+
+postMessage(sum)
+```
+
+3. 新建index.html
+4. 创建web worker,加载count.js
+5. 接收count.js发送的数据
+6. 渲染到界面上
+7. 销毁web worker
+
+
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>web worker</title>
+</head>
+<body>
+</body>
+<script>
+    window.onload = function () {
+        var worker = new Worker('count.js');
+        worker.onmessage = function (e) {
+            document.body.innerText = e.data;
+            worker.terminate();
+        }
+    }
+</script>
+</html>
+
+```
+
+## defer和async的异同
+
+
+<P style={{background:'lightblue'}}>
+
+都是异步加载脚本<br/>
+defer加载完延迟执行，可以保证顺序<br/>
+async加载完立即执行，无法保证顺序
+
+</P>

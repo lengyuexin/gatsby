@@ -1,0 +1,65 @@
+---
+title: 闭包
+date: '2020-12-21'
+spoiler: 闭包
+---
+
+
+import P from '../../../components/Panel.js'
+
+
+### 如何理解闭包
+
+<P >
+定义一个函数，函数内部的变量沿着作用域链查找，可以访问非当前作用域下的变量。
+这种情况下就是形成了闭包，该函数内引用非当前作用域的变量称为闭包变量。<br/>
+在v8引擎内部，解析函数的时候会进行一次预检查，当识别到闭包的存在后，会将其引用的变量复制一份到堆内存。<br/>
+外层函数执行完出栈后，内部变量被释放。
+但闭包变量此时引用已经指向堆内存，所以依旧可用。
+堆内存空间也不是无限大的，如果积累到一定程度又得不到释放，就会造成内存泄漏。
+闭包常见作用是变量私有化和缓存(如webpack同步加载)<br/>
+</P>
+
+
+
+### webpack同步加载
+
+
+```js
+(function (modules) {
+    //模块缓存
+    var installedModules = {}
+    //自己实现的__webpack_require__ 取代原生的require
+    function __webpack_require__(moduleId) {
+        //命中缓存 直接返回
+        if (installedModules[moduleId]) {
+            return installedModules[moduleId].exports
+        }
+        //未命中缓存 添加
+        var module = installedModules[moduleId] = {
+            id: moduleId,//模块id
+            load: false,//默认模块没有被加载,
+            exports: {},//导出的内容
+        }
+        //加载对应模块
+        modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+        module.load = true//已经加载
+        return module.exports
+
+    }
+    //加载入口模块
+    return __webpack_require__('./src/index.js')
+
+})(
+
+    {
+        './src/index.js': (function (module, exports, __webpack_require__) {
+            const title = __webpack_require__('./src/title.js')
+            console.log(title)
+        }),
+        './src/title.js': (function (module, exports,) {
+            module.exports = 'hello'
+        })
+    })
+
+```
