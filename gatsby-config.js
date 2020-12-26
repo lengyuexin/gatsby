@@ -3,12 +3,12 @@ module.exports = {
     title: "lengyuexin",
     author: "lengyuexin",
     description: "Blog by lengyuexin. Using Gatsby.",
-    siteUrl: "https://lengyuexin.gitee.io", // Domain of your site. No trailing slash!
+    siteUrl: "https://lengyuexin.github.io", // Domain of your site. No trailing slash!
     keywords: "Gatsby Mdx Blog",
     generator: "Gatsby React",
     defaultBanner: "/favicon.ico", // Path to your image you placed in the 'static' folder
   },
-  pathPrefix: "/",
+  pathPrefix: "/blog-preview/",
   plugins: [
     {
       resolve: `gatsby-source-filesystem`,
@@ -208,7 +208,7 @@ module.exports = {
       options: {
         name: `lengyuexin`,
         short_name: `lengyuexin`,
-        start_url: `/`,
+        start_url: `/blog-preview`,
         background_color: `#ffffff`,
         theme_color: `#ffa7c4`,
         display: `standalone`,
