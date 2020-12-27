@@ -247,3 +247,7 @@ pre[data-line] {
   float: left;
   min-width: 100%;
 }
+
+#___gatsby {
+  padding: 0.6rem;
+}

@@ -2,7 +2,6 @@ import React from "react"
 import { Link } from "gatsby"
 import sun from "../../assets/sun.png"
 import moon from "../../assets/moon.png"
-
 export default ({ location, themeToggle: onThemeToggle, theme }) => {
   const menus = [
     {
@@ -131,14 +130,16 @@ export default ({ location, themeToggle: onThemeToggle, theme }) => {
           listStyle: "none",
           display: "flex",
           flexDirection: "row",
+          margin: 0,
+          padding: 0,
         }}
       >
         {menus.map((v, idx) => (
           <li
             style={{
               display: "flex",
-              marginLeft: "1rem",
-              marginRight: "1rem",
+              marginLeft: "0.5rem",
+              marginRight: "0.5rem",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
