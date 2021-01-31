@@ -1,0 +1,88 @@
+---
+title: 作用域链
+date: '2020-12-28'
+spoiler: 作用域链
+---
+
+
+import P from '../../../components/Panel.js'
+
+
+
+
+<P>
+
+函数执行时会形成一个私有作用域,也叫函数作用域。<br/>
+私有作用域内的形参或声明的变量称为私有变量,其变化与全局变量无关。<br/>
+如果当前作用域不存在该变量,说明是非私有变量,去上层作用域查找。<br/>
+如果上层作用域找不到该变量,查找上上层作用域,一直到顶层,还找不到就报错。<br/>
+这个查找过程类似一条链条,称为作用域链。<br/>
+定义当前函数的作用域就是该函数的上级作用域,与函数何处执行无关。
+
+
+</P>
+
+
+<P style={{background:'lightblue'}}>
+
+```js
+var a=10;
+function fn1(){
+    return function fn2(){
+        return function fn3(){
+            //这里的a会一直查找到挂载到window上的全局变量a
+            //fn3=>fn2=>fn1=>window
+           return a
+        }
+    }
+}
+fn1()()()
+
+
+var count=10;
+function fn(){
+    var count=100;
+    return function(){
+        console.log(count)
+    }
+}
+var f=fn();
+f();//定义f的作用域实际是fn函数,其上级作用域就是fn,此时count=100
+
+
+
+
+function fn(){
+    var i=10;
+    return function (n){
+        console.log(n+(++i))
+    }
+}
+
+var f=fn();
+f(10)//21 私有作用域,计算后i值累加, i=11
+f(20) //32 私有作用域 ,此时i=11
+fn()(10) //21 独立私有作用域,执行完当前作用域销毁
+fn()(20) // 31 独立私有作用域,执行完当前作用域销毁
+
+
+
+
+```
+
+</P>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

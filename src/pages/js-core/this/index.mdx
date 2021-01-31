@@ -1,0 +1,75 @@
+---
+title: this指向
+date: '2020-12-28'
+spoiler: this指向
+---
+
+
+import P from '../../../components/Panel.js'
+
+
+
+<P>
+this指向动作发生的主体，与定义位置和调用位置无关。
+浏览器环境下，全局this指向window。
+node环境下，全局this指向一个空对象{}。
+</P>
+
+
+
+## this的判断规则
+
+<P style={{background:'lightblue'}}>
+
+函数执行若以xxx.fn()形式调用，则.前的xxx为this指向<br/>
+函数执行若以fn()形式调用，则this指向全局<br/>
+自执行函数的this永远指向全局<br/>
+给元素某个事件绑定方法，事件触发，该方法的this指向绑定的元素<br/>
+箭头函数没有自己的this,会沿着作用域链向上查找最近一层的this
+
+</P>
+
+
+**代码示例**
+
+<P style={{background:'#FDB99B'}}>
+
+
+```js
+function fn(){
+    console.log(this)
+}
+var obj={fn}
+
+fn();//this=>global
+obj.fn//this->obj 
+
+function f(){
+    fn()//this=>global
+}
+f();
+
+var user={
+    say(){
+        fn()//this=>global
+    }
+}
+user.say()
+
+(function(){
+    fn();//this=>global
+})()
+
+document.body.onclick=fn //this=>body
+document.body.onclick=function(){
+    fn();//this=>global
+}
+
+
+
+
+
+```
+
+</P>
+

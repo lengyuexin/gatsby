@@ -9,6 +9,7 @@ function Panel({ children, style = {} }) {
         borderRadius: "0.75em",
         padding: "0.75em",
         color: "inherit",
+        margin: "0.8rem 0",
         background: "var(--inlineCode-bg)",
         // wordBreak: 'keep-all',
         ...style,
