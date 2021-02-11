@@ -1,0 +1,477 @@
+---
+title: 'koa2核心功能实现'
+date: '2021-02-11'
+spoiler: koa2核心功能实现
+---
+
+
+
+## 前言
+
+koa和express都是nodejs的web框架,但它们的设定不同。
+express自身集成很多东西,比较重,适合企业级的应用开发。
+koa功能纯粹,扩展功能需高度依赖生态。这种可插拔的形式使得其更为灵活,轻量。
+从npm周下载量来看,express千万级,koa十万级,差距还是很明显。
+本篇为源码系列核心实现第一篇,对应下图koa2部分。
+
+
+![src](https://lengyuexin.github.io/gatsby/static/src-c54cf51e73a8fdc229c79ea7b981b607.png)
+
+
+## 核心功能概览
+
+
+koa2即使是全部代码,也没多少东西。从整体上看,主要分为五大方向。
+
+|||
+|--|--|
+|name|desc|
+|application|创建上下文,合并中间件,启动服务|
+|request|对原生http模块req的扩展|
+|response|对原生http模块res的扩展|
+|context|对request和response的合并与代理|
+|compose|合并中间件(洋葱模型的体现)|
+
+
+## koa是如何启动一个服务的？
+
+
+### 基本使用
+
+在详解上述功能模块前,先来看看koa最基础的使用。
+
+
+```js
+const Koa=require('koa')
+const app=new Koa()
+app.listen(3000,()=>{
+    console.log('run server__')
+})
+
+```
+
+### 核心实现
+
+简单的几行代码就实现了koa最核心的功能——提供基础的HTTP应用服务。
+它是如何实现的呢？其实也没什么玄机,直接用了内置的http模块。
+注意一个小细节:Application是一个类,这也就解释了在使用koa时为什么要new一下。
+
+```js
+const http=require('http')
+class Application{
+    listen(...args){
+       const server= http.createServer()
+       server.listen(...args)
+    }
+}
+```
+
+
+
+
+##  koa是如何处理一个请求的？
+
+
+### 基础使用
+
+既然应用启动是直接使用了http模块,那对于请求处理是不是也和http模块的处理相似呢？
+是的,确实如此,但koa做的更多。先来看一个例子,
+下面代码背后包含了koa对于一个请求到响应的完整处理过程。
+
+```js
+app.use(async ctx=>{
+    ctx.body='hello world'
+})
+
+```
+
+### 一个请求--响应带来的思考
+
+就这？一个use,一个ctx,一个body,啥也没看出来啊？
+还有,为啥要加个async ,去掉不行？
+
+从视觉入手，这几个最直观的点也最好解释。
+带着问题去思考问题，是我最喜欢的学习方式。
+ok,接下来，我们就看一下koa内部是如何处理请求的。
+
+
+```js
+class Application{
+    use(fn){
+        this.fn=fn
+    }
+    handleRequest(req,res){
+        const ctx=this.createContext(req,res)
+        this.fn(ctx)
+    }
+     listen(...args){
+       const server= http.createServer(this.handleRequest.bind(this))
+       server.listen(...args)
+    }
+}
+
+```
+
+这几行代码没什么玄机，所谓的use方法,不过是将接收的函数暂存，后续在handleRequest中执行。
+
+handleRequest函数见名知意，用于处理请求。其实，也就是把原生http模块
+createServer的事件处理函数做了一个提取，并将上下文this指向我们自己
+写的Application类。其中，this.fn(ctx)这行代码，解释了为什么每一个请求处理函数都会接收ctx参数。
+
+
+
+### createContext是什么？
+ 
+看名字是要创建上下文。是的，这就是koa独特的地方。
+
+koa将原生http模块事件处理函数的req和res参数合二为一后又做了一层增强。
+最终的结果就是:req,res有的,ctx皆有。req,res没有的,ctx还有。
+对开发者而言，合二为一后完全无需关心某个方法是req的还是res的，直接一个ctx完事。
+
+
+说了这么多，我们就来看一下createContext的庐山真面目。
+
+```js
+class Application{
+    constructor(){
+        //这三个是外部引入的
+        this.context=context;
+        this.request=request;
+        this.response=response;
+    }
+    createContext(req,res){
+        //使用Object.create是为了在不对原模块进行干扰的情况下进行扩展,也是一层继承
+        const context=Object.create(this.context)
+        const request=Object.create(this.request)
+        const response=Object.create(this.response)
+        //上下文关联与合并
+        context.req=context.request.req=req    
+        context.res=context.response.res=res
+        //返回一个合并后的context;
+        return context
+    }
+}
+
+```
+
+为了便于理解，我在必要部分加了一些注释。
+暂且不管构造器里的context，request，response是什么，先只看createContext函数做了什么。
+里边有两行看起来很绕的连续赋值代码，其实就是往ctx上挂载东西。
+
+比如你用原生http模块结束响应是res.end(),那现在可以用ctx.res.end()，也可以用ctx.response.res.end()。
+req和res是一样的道理，这里就不再赘述了。
+
+
+### request和response
+
+
+到这里，我们之前疑惑的use,ctx已经解释完。在进一步解释async和body前，我们暂且引出一个新的问题。
+request和response与http模块事件处理函数的req,res的关系是什么？
+
+首先可以肯定的是，绝不是同一个东西。但是，request和response是对req和res的一个增强。
+这两个文件，是koa单独搞出来的，其内部使用了getter,setter。
+
+
+先来看一个request的简单示例：
+
+```js
+const request={
+    get url() {
+        return this.req.url;
+    }
+}
+module.exports=request
+```
+
+这里的this指向request对象，但仅这样还看不出玄机，别忘了在createContext方法中的request身上恰好挂了一个req。
+这意味着什么？意味着访问ctx.request.req 就是访问原生req。
+
+举个例子：上边request中的url访问方式看似是ctx.request.url，实际上是ctx.request.req.url。
+
+
+
+```js
+app.use(ctx => {
+    ctx.body=ctx.request.req.url===ctx.request.url //true
+})
+
+```
+
+
+也许你会觉得，这个例子看起来好像是代理啊，如何起到增强作用呢?
+
+
+```js
+const request = {
+    get headers() {
+        return this.req.headers;
+    },
+    get header() {
+        return this.req.headers;
+    },
+}
+
+```
+
+个人习惯问题，在写代码时会纠结是headers还是header。
+koa考虑的很人性化，不管你用哪种，都对，最终都是访问的headers。
+从这点考虑，岂不就是容错性的增强？当然，实际的增强并不仅限于此，甚至可以自定义你想要的业务逻辑。
+
+
+response和request同理，这里不再赘述。只提最关键的一点，body。
+
+
+```js
+const response = {
+    _body: '',
+    get body() {
+        return this._body
+    },
+    set body(newBody) {
+        this._body = newBody
+    }
+}
+module.exports = response
+```
+
+
+这样一看是不是body也没那么神奇了呢？不过就是一个变量而已。
+若是访问，直接返回变量_body;若是设置，接收新值完成更新。
+
+
+也许你会好奇，ctx.body和这个body是一个东西吗？是的，当然是。
+那它们是如何关联上的？看起来是代理？是的，就是代理，通过context。
+
+
+### 神奇的context代理
+
+
+先来看看context内部实现吧。
+
+```js
+const context = {}
+
+function delegateGet(prop, key) {
+    //__defineGetter__这个方法是当访问对象的某个key时,执行回调
+    context.__defineGetter__(key, function () {
+        return this[prop][key]
+    })
+}
+function delegateSet(prop, key) {
+    context.__defineSetter__(key, function (newValue) {
+        this[prop][key] = newValue
+    })
+}
+
+delegateGet('response', 'body')//访问ctx.body
+delegateSet('response', 'body')//设置ctx.body='xxx'
+delegateGet('request', 'url')//ctx.url<=>ctx.request.url
+
+module.exports = context
+
+```
+
+看完上述代码来个小总结吧。
+ctx本质是代理,并非增强;
+ctx做的响应相关的,一定是交给response;
+ctx做的请求相关的,一定是交给request。
+
+
+
+关于__defineGetter__,可参考文末MDN相关链接。如果你去看koa源码,你会发现它使用了一个第三方包:delegates,其实这东西实现也是用的__defineGetter__
+
+
+
+### 神奇的组合能力:compose
+
+
+到这里我们之前提到的疑惑只剩下async尚未解决，接下来就深入展开一波。
+在探究compose函数实现前，先来想一下为什么需要组合？解决了什么问题？
+
+
+
+```js
+
+app.use(bodyParser())
+app.use(koaStatic())
+...
+
+```
+
+koa中，use函数可以多次调用,但是默认情况下只会执行第一个。
+后边的如果想执行,需要上游调用next函数,也就是use函数的第二个参数。
+那如何涉及异步怎么搞？这就是async的意义所在。
+多个中间件如何执行呢？这就是compose函数的意义。(洋葱模型)
+
+
+<img src='https://img-blog.csdnimg.cn/20201126182252279.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70#pic_center' alt='onion' style='zoom:30%;'/>
+<img src='https://img-blog.csdnimg.cn/20201126182252258.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70#pic_center' alt='compose' style='zoom:30%;'/>
+
+
+依次输出123456
+
+```js
+
+app.use((ctx, next) => {
+    console.log(1)
+    next()
+    console.log(6)
+})
+app.use((ctx, next) => {
+    console.log(2)
+    next()
+    console.log(5)
+})
+app.use((ctx, next) => {
+    console.log(3)
+    next()
+    console.log(4)
+})
+
+```
+
+
+接下来我们来研究一波它的实现。
+核心三要素，按存储顺序依次执行，支持异步，洋葱模型。
+
+```js
+
+//做一个小小的改造，支持多个use调用
+    use(fn){
+        this.middlewares.push(fn)
+    }
+
+  compose(ctx) {
+    //这里dispatch(也就是next)使用箭头函数
+    //内部的this就指向了自定义的Application
+    const dispatch = (index) => {
+        //越界处理 handleRequest还有then 不能直接return ,要返回promise
+        if (index === this.middlewares.length) return Promise.resolve()
+        //获取当前的中间件 最开始是第一个
+        const middleware = this.middlewares[index]
+        // 中间件执行需要两个参数
+        const exec = middleware(ctx, () => dispatch(++index))
+        //有可能这个方法没有加async,包装一层
+        //保证返回的是一个promise
+        //这样handleRequest的then函数就不会报错(下文解释)
+        return Promise.resolve(exec)
+    }
+    return dispatch(0)
+}
+
+```
+
+
+
+到这里，compose实现基本就完活了，边界细节可以去看koa-compose。
+
+上边有提到最后要返回promise，看起来有些突兀。莫慌，补上最后一波代码就可以理解了。
+
+
+
+### handleRequest
+
+```js
+
+  handleRequest(req, res) {
+
+        const ctx = this.createContext(req, res)
+      //组合中间件 并执行返回后的promise,获取到_body 响应出去
+      //注意看这里，是有一个then的
+      //这就意味着最后不管你写的函数加不加async，进了compose，都是异步
+        this.compose(ctx).then(() => {
+             //默认只能处理buffer 和string
+            let _body = ctx.body;
+            if (_body === '') {
+                //如果没设置body 就给个默认值,状态码设置为404
+                res.statusCode = 404
+                _body = 'not found'
+                return res.end(_body)
+            } else if (_body instanceof Stream) {
+                //koa也支持直接返回一个文件流,通过pipe就可以做到 
+                return _body.pipe(res)
+            } else if (typeof _body !== 'null' && typeof _body === 'object') {
+                //对对象的处理
+                return res.end(JSON.stringify(_body))
+            } else if (_body == null) {
+                //null 和undefined 无法直接调用toString 可以拼接一下
+                return res.end(_body + '')
+            } else {
+                //其他类型的直接toString 
+                return res.end(_body.toString())
+            }
+        }).catch(err => {
+            //这里为app添加了错误监听
+            //application继承events模块即可
+            this.emit('error', err)
+         })
+    }
+
+```
+
+
+到这里核心部分就都解释完了，源码我会以压缩包形式给出。
+
+最后来一波加餐，中间件的实现,本质就是函数返回一个接收ctx,next为参数的异步函数。
+
+
+
+
+## koa-static
+
+
+```js
+function koaStatic(dirname) {
+    return async function (ctx, next) {
+        try {
+            let filepath = path.join(dirname, ctx.path)
+            const stat = fs.statSync(filepath);
+            if (stat.isDirectory()) {
+                filepath = path.join(filepath, './index.html')
+                if (fs.existsSync(filepath)) {
+                    ctx.set('Content-Type', `text/html;charset=utf-8`)
+                    ctx.body = fs.createReadStream(filepath)
+                } else {
+                    await next()
+                }
+            } else {
+                if (fs.existsSync(filePath)) {
+                    //来自第三方包mime
+                    const mimeType = mime.getType(filepath)
+                    ctx.set('Content-Type', `${mimeType};charset=utf-8`)
+                    ctx.body = fs.createReadStream(filepath)
+                } else {
+                    await next()
+                }
+            }
+
+        } catch (error) {
+            await next()
+        }
+    }
+}
+
+//根据目录查找对应文件 找到返回 找不到next
+app.use(koaStatic(__dirname))
+app.use(koaStatic(path.resolve(__dirname, 'public')))
+
+```
+
+
+## 相关链接
+
+__defineGetter__: https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/__defineGetter__
+
+## 源码压缩包
+
+- https://github.com/lengyuexin/code
+
+## 再会
+
+情如风雪无常，
+
+却是一动既殇。
+
+感谢你这么好看还来阅读我的文章，
+
+我是冷月心，下期再见。
