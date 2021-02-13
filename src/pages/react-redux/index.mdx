@@ -1,0 +1,261 @@
+---
+title: 'react-redux核心功能实现'
+date: '2021-02-13'
+spoiler: react-redux核心功能实现
+---
+
+
+
+## 前言
+
+
+react-redux作为react和redux的粘合剂,可完成状态的订阅与更新。
+这部分涉及的核心功能点有三个:provider,context,connect。
+
+面试高频:connect,mapStateToProps,mapDispatchToProps的应用和原理。
+
+本篇为源码系列核心实现第四篇,对应下图react-redux部分。
+
+
+![src](https://lengyuexin.github.io/gatsby/static/src-c54cf51e73a8fdc229c79ea7b981b607.png)
+
+
+|||
+|--|--|
+|name|desc|
+|provider|数据提供方|
+|context|状态上下文对象|
+|connect|高阶组件,被包装后的组件可连接store|
+
+
+## Provider与Context
+
+
+Provider用于向所有组件传递数据仓库store,配合Context使用。
+
+
+### 基本使用
+
+```js
+//store来源于redux中createStore方法的返回值。
+ function App() {
+  return (
+    <Provider store={store}>
+      <Child />
+    </Provider>
+  );
+}
+
+```
+
+### 实现
+
+**context的实现**
+
+```js
+const context = React.createContext(null);
+export default context;
+
+```
+
+**provider的实现**
+
+```js
+
+//ReactReduxContext就是上边的context
+ class Provider extends Component{
+  render() {
+    return (
+      <ReactReduxContext.Provider
+        value={{store: this.props.store}}
+      >
+        {this.props.children}
+      </ReactReduxContext.Provider>
+    );
+  }
+}
+
+```
+
+
+
+这就完事了？是的,大道至简。
+关键也不在这里,下面来看重头戏connect。
+
+
+
+
+## connect
+
+
+
+### connect是怎么使用的？
+
+
+了解其背后实现前,先看一下大概用法。
+
+```js
+import { connect } from 'react-redux'
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(App)
+
+```
+
+就这？对,就这一下子就完事了。
+connect是高阶函数,最后会返回一个包装后的组件。
+
+### mapStateToProps和mapDispatchToProps
+
+
+connect方法可接受两个参数:mapStateToProps和mapDispatchToProps。
+其中mapStateToProps用于将从store中获取的state映射到被包裹组件的props上,主要用于数据渲染。
+mapDispatchToProps是将交互逻辑映射成action后传递给被包装后的组件,主要用于事件交互(如点击)。
+
+mapStateToProps是一个函数,最后会返回一个对象,对象属性为store中状态树的同名属性。
+
+```js
+//store中数据
+state:{
+    name:'冷月心'
+}
+const mapStateToProps = (state) => {
+  return {
+    name:state.name
+  }
+}
+
+//被connect包裹后组件props中可以拿到name属性
+function App(props){
+ props.name//冷月心
+}
+
+```
+
+mapStateToProps会订阅 Store,state更新会触发视图的重新渲染,这在react中表现为setState。
+这部分就涉及到了subscribe和setState,暂且略过,下文会提到。
+
+
+**第二个参数**
+
+我之前面试,忘了哪个面家面试官问的了,但确实没回答上。
+
+他问我mapStateToProps和mapDispatchToProps的第二个参数是什么？
+说实话我脑瓜子嗡嗡的,当时一脸诧异,这还有第二个参数？
+后来了解到确实有,就是组件自身的props,也可以叫ownProps。
+且ownProps发生改变,mapStateToProps和mapDispatchToProps就会重新被调用。
+
+
+
+**不同类型的mapDispatchToProps**
+
+与mapStateToProps不同,mapDispatchToProps可以是一个对象,也可以是一个函数。
+connect内部,对象类型的mapDispatchToProps会使用bindActionCreators完成ActionCreators与dispatch的绑定。
+函数类型的mapDispatchToProps会接收一个dispatch参数,返回dispatch后的action。
+
+```js
+//函数形式
+const mapDispatchToProps = (
+  dispatch
+) => {
+  return {
+    onClick: () => {
+      dispatch({
+        type: 'ADD',
+      });
+    }
+  };
+}
+
+//对象形式
+
+const mapDispatchToProps = {
+  onClick: () => ({
+    type: 'ADD',
+  })
+}
+
+
+```
+
+具体使用哪种形式还是看个人习惯，喜欢就好。
+
+
+### connect的实现
+
+ connect一共做了四件事:订阅,状态映射,dispatch映射,返回扩展后的被包裹组件。
+
+```js
+
+import React from "react";
+import bindActionCreators from "../redux/bindActionCreators";
+import ReactReduxContext from "./Context";
+export default function (mapStateToProps, mapDispatchToProps) {
+  return function (OldComponent) {
+    return class newComponent extends React.Component {
+      unsubscribe;
+      static contextType = ReactReduxContext;
+      constructor(props, context) {
+        super(props);
+        this.state = mapStateToProps(context.store.getState());
+      }
+
+      componentDidMount() {
+        this.unsubscribe = this.context.store.subscribe(() => {
+          // mapStateToProps接收一个state参数,返回一个state对象
+          this.setState(mapStateToProps(this.context.store.getState()));
+        });
+      }
+
+      componentWillUnmount() {
+        this.unsubscribe();
+      }
+
+      render() {
+        let actions;
+        if (typeof mapDispatchToProps === "function") {
+          actions = mapDispatchToProps(this.context.store.dispatch);
+        } else if (
+          mapDispatchToProps &&
+          typeof mapDispatchToProps === "object"
+        ) {
+          actions = bindActionCreators(
+            mapDispatchToProps,
+            this.context.store.dispatch
+          );
+        }
+
+        return <OldComponent {...this.state} {...actions} />;
+      }
+    };
+  };
+}
+
+
+```
+
+
+
+- connect在挂载阶段订阅更新函数setState,在卸载阶段取消订阅。
+- connect从context的store中调用getState,返回值作为参数给mapStateToProps。
+- mapStateToProps函数执行的返回值用于初始化this.state,之后传递给被包裹组件。
+- 对于dispatch映射分为两种情况,如果mapDispatchToProps是一个对象,就需要用bingActionCreators绑定
+- 如果mapDispatchToProps是一个函数,就给这个函数传递dispatch参数并调用,最后返回的actions传递给被包裹的组件。
+- 最终,将映射完的组件返回。
+
+
+
+## 源码压缩包
+
+- https://github.com/lengyuexin/code
+
+## 再会
+
+情如风雪无常,
+
+却是一动既殇。
+
+感谢你这么好看还来阅读我的文章,
+
+我是冷月心,下期再见。
