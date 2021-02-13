@@ -1,0 +1,560 @@
+---
+title: 'axios核心功能实现'
+date: '2021-02-11'
+spoiler: axios核心功能实现
+---
+
+
+
+## 前言
+
+axios可作为前后端通信的桥梁,十分重要,同样也是面试高频。
+但实际上,axios的功能点拆分来看,并不是很多。主要分为适配器,拦截器,请求发送,请求取消四大部分。
+本篇为源码系列核心实现第二篇,对应下图axios部分。
+
+
+![src](https://lengyuexin.github.io/gatsby/static/src-c54cf51e73a8fdc229c79ea7b981b607.png)
+
+
+|||
+|--|--|
+|name|desc|
+|adapter|根据宿主环境适配请求方式|
+|interceptor|请求拦截器,响应拦截器|
+|request|发起请求|
+|cancel token|取消请求|
+
+
+## axios是如何根据不同宿主环境适配请求方式的？
+
+### 环境识别
+
+axios作为一个http请求库,可用于客户端浏览器,也可以用于nodejs。
+那问题来了,它是如何识别宿主环境的呢？
+
+抛开axios本身,我们来想一下,浏览器环境和node环境,到底有什么差异？
+
+首先document,window,XMLHttpRequest对象是浏览器环境下才有的。
+process,global全局对象是node环境下才有的。
+从这点考虑,我们可以使用document,window,XMLHttpRequest,process,global这些对象进行判断。
+
+axios源码中采用了process和XMLHttpRequest。
+通过宿主环境的特有对象识别当前环境,适配出不同环境下的请求方式。
+
+
+```js
+function getDefaultAdapter() {
+  var adapter;
+  if (typeof XMLHttpRequest !== 'undefined') {
+    // For browsers use XHR adapter
+    adapter = require('./adapters/xhr');
+  } else if (
+      typeof process !== 'undefined' 
+      && Object.prototype.toString.call(process) 
+      === '[object process]'
+    ) {
+    // For node use HTTP adapter
+    adapter = require('./adapters/http');
+  }
+  return adapter;
+}
+
+var defaults = {
+  adapter: getDefaultAdapter(),
+}
+```
+
+这部分代码没什么复杂逻辑,根据XMLHttpRequest判定是浏览器环境,实际请求就是xhr。
+node端相对复杂,使用了Follow Redirects,加强了原生的http和https。
+
+
+### 适配时机
+
+
+如果要做适配,放在哪个时机更为合适呢？当然是初始化就安排。
+上边的适配部分导出了一个对象defaults,这个对象被用于创建axios实例。
+
+
+
+```js
+function createInstance(defaultConfig) {
+  var context = new Axios(defaultConfig);
+  var instance = bind(Axios.prototype.request, context);
+  utils.extend(instance, Axios.prototype, context);
+  utils.extend(instance, context);
+  return instance;
+}
+//这里的defaults就是上边导出的包含适配器的defaults
+var axios = createInstance(defaults);
+
+```
+
+
+
+
+## axios的拦截器
+
+### 功能概览
+
+拦截器分为请求拦截和响应拦截,可设置多个。但一般只会请求设置一个,响应设置一个。
+
+
+
+
+**请求拦截可用于校验并携带token**
+
+```js
+axios.interceptors.request.use(
+    config => {
+        //请求携带token
+        const token=localStorage.getItem('token');
+        token&&(config.headers.Authorization=token);
+        return config
+    },
+    error=>Promise.reject(error)
+)
+
+```
+
+**响应拦截可用于数据处理和错误处理**
+
+```js
+
+axios.interceptors.response.use(
+  //直接返回响应主体
+    response => response.data,
+    error=>{
+        const {response} =error;   
+        if(response){
+            //有响应内容 根据不同状态码进行不同处理
+            switch(response.status){
+                case 401:{ 
+                    //=>权限处理,一般是未登录 ,可跳转至登录页或提示未登录
+                    break;
+                }
+                case 403:{ 
+                    //=>服务器拒绝执行,一般是token过期或直接禁止访问
+                    break;
+                }
+                case 404:{ 
+                    //=>资源找不到,可跳转至404页面
+                    break;
+                }           
+            }
+
+        }else{
+            //无响应内容 断网或服务器错误
+            if(!window.navigator.onLine){
+                return Promise.reject("网络连接中断,请检查...")
+            }
+            //服务器错误,直接返回错误信息
+            return Promise.reject(error)
+        }
+    }
+)
+
+
+
+```
+
+**每个设置的拦截器都可以通过eject方法取消拦截**
+
+
+```js
+const req1=axios.interceptors.request.use(config=>{
+  config.headers.count+='req1'
+  return config
+
+})
+//取消请求拦截器
+axios.interceptors.request.eject(req1)
+
+const res1=axios.interceptors.response.use(config=>{
+  config.headers.count+='res1'
+  return config
+
+})
+//取消响应拦截器
+axios.interceptors.response.eject(res1)
+
+```
+
+
+
+
+
+### 拦截器到底是个什么东西？
+
+看了上边的实现基础使用,也许你会好奇,拦截器本质是什么？
+没什么玄机,其本质就是一个对象,该对象带有成功的处理函数和失败的处理函数。
+看到这是不是想到了promise?是的,就是promise.then接收的两个参数。
+
+
+拦截器源码中维护了一个InterceptorManager,用于拦截器的管理,包括新增和删除。
+
+```js
+
+function InterceptorManager() {
+  this.handlers = [];
+}
+
+InterceptorManager.prototype.use = function use(fulfilled, rejected) {
+  this.handlers.push({
+    fulfilled: fulfilled,
+    rejected: rejected
+  });
+  //返回值视为id,可用于后续清除无效拦截器
+  return this.handlers.length - 1;
+};
+
+InterceptorManager.prototype.eject = function eject(id) {
+  if (this.handlers[id]) {
+    this.handlers[id] = null;
+  }
+};
+
+//剔除无效的拦截器
+InterceptorManager.prototype.forEach = function forEach(fn) {
+  utils.forEach(this.handlers, function forEachHandler(h) {
+    if (h !== null) {
+      fn(h);
+    }
+  });
+};
+
+
+
+```
+
+
+
+### 拦截器与请求的执行顺序
+
+
+请求拦截器2=>请求拦截器1=>请求=>响应拦截器1=>响应拦截器2 
+
+值得注意的是：请求拦截器先加的后执行,响应拦截器先加的先执行。
+
+请求拦截器,实际请求,响应拦截器的执行顺序看起来像一个链条,内部又是怎么串联起来的？
+axios对这部分的实现,让我觉得真是将promise链式调用玩到了极致,看完只觉得震惊。
+
+
+```js
+
+function Axios(instanceConfig) {
+  this.defaults = instanceConfig;
+  this.interceptors = {
+    request: new InterceptorManager(),
+    response: new InterceptorManager()
+  };
+}
+
+Axios.prototype.request = function request(config) {
+  
+  //...
+
+  // dispatchRequest 实际就是一个xhr
+  var chain = [dispatchRequest, undefined];
+  var promise = Promise.resolve(config);
+
+//请求前置 
+  this.interceptors.request.forEach(function unshiftRequestInterceptors(interceptor) {
+    chain.unshift(interceptor.fulfilled, interceptor.rejected);
+  });
+
+//响应后置 
+  this.interceptors.response.forEach(function pushResponseInterceptors(interceptor) {
+    chain.push(interceptor.fulfilled, interceptor.rejected);
+  });
+
+  while (chain.length) {
+    promise = promise.then(chain.shift(), chain.shift());
+  }
+  return promise;
+};
+
+```
+
+上述代码通过前后unshift和push将请求拦截和响应拦截放置在真正请求两侧,然后在while循环
+中通过promsie链式不断向后传递,最后将结果返回。
+
+实际上的chain是这样的,举个例子:
+
+```js
+var chain = [
+  '请求成功拦截2', '请求失败拦截2',  
+  '请求成功拦截1', '请求失败拦截1',  
+   dispatch,  undefined,
+  '响应成功拦截1', '响应失败拦截1',
+  '响应成功拦截2', '响应失败拦截2',
+]
+
+```
+
+chain中的相邻两项恰好是对应拦截器的成功回调和失败回调,
+与promise.then(chain.shift(), chain.shift())一一对应。
+
+
+## 发起请求
+
+
+接下来就到了关键的时刻,发起请求。其实现并不难,在浏览器端其实就是用了xhr。
+对应相关概念是axios源码中的dispatchRequest和xhr.js。
+
+
+
+```js
+function dispatchRequest(config) {
+    return new Promise((resolve, reject) => {
+        let { method, url, params, data, timeout } = config;
+        let xhr = new XMLHttpRequest();
+        xhr.responseType = "json";
+        if (params && typeof params === "object") {
+            params = require("qs").stringify(params);
+        } else {
+            params = "";
+        }
+        url += (url.indexOf("?") === -1 ? "?" : "&") + params;
+        xhr.open(method, url, true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+                if (
+                 xhr.status >= 200
+                 && xhr.status < 300
+                 ) {
+                   const data=xhr.response ? xhr.response : xhr.responseText
+                    const res = {
+                      config,
+                      data ,
+                      request: xhr,
+                      status: xhr.status,
+                      statusText: xhr.statusText,
+                  };
+                    resolve(res);
+                } else if (
+                  (
+                    xhr.status < 200 && xhr.status !== 0)
+                   || xhr.status > 400
+                   ) {
+                    reject("Error: Request failed with status code " + xhr.status + "");
+                }
+            }
+        };
+
+        xhr.onerror = function () {
+            reject("请求失败");
+        };
+
+        if (timeout) {
+            xhr.ontimeout = function () {
+                reject("Error: timeout of " + timeout + "ms exceeded");
+            };
+        }
+
+        let body = null;
+        if (data) {
+            body = JSON.stringify(data);
+        }
+
+        xhr.send(body);
+    });
+}
+
+
+
+```
+
+上面代码做了一个简化实现,但其实还可以更精简。是的,上边的一大堆压缩到极致就是三行核心代码。
+
+看到这是不是觉得axios的浏览器端请求也不过如此？对的,它本来也不是多复杂,且依赖的就是xhr。
+
+```js
+var xhr=new XMLHttpRequest();
+xhr.open('get',url)
+xhr.send(null)
+
+```
+
+
+
+也许你会问,这就是get请求啊,那其他的请求呢？
+axios的其他http方法实现可以参考下面代码,循环并赋值,其中的request可以视为包装好的xhr。
+
+
+```js
+
+// Provide aliases for supported request methods
+utils.forEach(['delete', 'get', 'head', 'options'], 
+function forEachMethodNoData(method) {
+  Axios.prototype[method] = function(url, config) {
+    return this.request(mergeConfig(config || {}, {
+      method: method,
+      url: url,
+      data: (config || {}).data
+    }));
+  };
+});
+
+utils.forEach(['post', 'put', 'patch'], 
+function forEachMethodWithData(method) {
+  Axios.prototype[method] = function(url, data, config) {
+    return this.request(mergeConfig(config || {}, {
+      method: method,
+      url: url,
+      data: data
+    }));
+  };
+});
+
+
+```
+
+
+## 如何取消某个请求呢？
+
+
+爱而不得,果断放手。对于不要的请求,可以直接丢掉。
+
+举个例子:tab频繁切换页面,之前的请求可能还没响应完,但确实不再需要。此时,就可取消请求。
+
+
+
+
+### 基本使用
+
+
+在看具体实现前,先关注一下使用方式。
+
+```js
+
+import axios from 'axios'
+
+const CancelToken = axios.CancelToken;
+const isCancel = axios.isCancel;//判断是否是用户自主取消
+const source = CancelToken.source();
+axios({
+ cancelToken: source.token,
+})
+
+
+axios(config).catch(err => {
+    if (isCancel(err)) {
+      console.error(err.msg,);
+    } else {
+      console.log(err);
+    }
+  });
+
+  source.cancel("cancel");
+
+
+```
+
+上边都是模板代码,也没啥玄机。获取CancelToken,执行其source函数。
+其返回值是一个对象,对象上有一个token属性,这个token被作为值传递给axios。
+
+
+
+### 代码实现
+
+```js
+
+class Cancel {
+  public msg: string = "";
+  constructor(msg: string) {
+    this.msg = msg;
+  }
+}
+
+export function isCancel(err: any) {
+  return err instanceof Cancel;
+}
+export class CancelToken {
+  public resolve: any;
+
+  source() {
+    return {
+      token: new Promise((resolve) => {
+        this.resolve = resolve;
+      }),
+      cancel: (msg: string) => {
+        this.resolve(new Cancel(msg));
+      },
+    };
+  }
+}
+
+
+
+//dispatchRequest内部调用
+
+if (config.cancelToken) {
+  config.cancelToken.then((msg: string) => {
+      xhr.abort();
+      reject(msg);
+  });
+}
+
+```
+
+**结合使用,分析一下取消请求的整个过程。**
+
+1. source()函数执行,CancelToken类内部属性resolve初始化为promise。
+2. axios接收的cancelToken其实就是初始化完的promise。
+3. 2中的promise在then函数中调用xhr.abort()完成请求取消,这是最核心的一步。
+4. then函数中调用reject方法将接收的msg报错信息捕获。
+5. 这个报错信息来源就是外部source.cancel()执行后,resolve(message)的结果。
+6. axios在xhr外面包了一层Promise,最终,错误信息被catch捕获。
+
+
+
+
+
+## axios面试大概会问什么？
+
+###  为什么axios既可以当函数调用,也可以当对象使用
+
+-  axios本质是函数,赋值了一些别名方法,比如get、post方法,可被调用
+-  对象调用是因为获取的是Axios类的实例
+-  最终调用的还是Axios.prototype.request函数。
+
+
+###  简述axios调用流程。
+
+- 创建axios实例
+- 实际调用的是Axios.prototype.request方法
+- 最终返回promise链式调用结果
+- 请求是在dispatchRequest中派发的，浏览器端本质是xhr
+
+
+###  聊一聊拦截器？
+
+- axios.interceptors.request.use添加请求成功和失败拦截器函数
+- axios.interceptors.response.use添加响应成功和失败拦截器函数
+- 在Axios.prototype.request函数组成promise链式调用时, Interceptors.protype.forEach遍历请求和响应拦截器
+- 通过unshift和push添加到真正发送请求dispatchRequest的两端,从而做到请求前拦截和响应后拦截
+- 拦截器也支持用Interceptors.protype.eject方法移除。
+
+###  axios的取消请求功能是怎么实现的？
+
+- config配置cancelToken
+- 在promise链式调用的dispatchRequest抛出错误
+- 在adapter中request.abort()取消请求
+- 使promise走向rejected
+- 用户捕获错误信息
+
+
+
+## 源码压缩包
+
+- https://github.com/lengyuexin/code
+
+## 再会
+
+情如风雪无常,
+
+却是一动既殇。
+
+感谢你这么好看还来阅读我的文章,
+
+我是冷月心,下期再见。

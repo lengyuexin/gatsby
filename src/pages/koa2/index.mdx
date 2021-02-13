@@ -90,9 +90,9 @@ app.use(async ctx=>{
 就这？一个use,一个ctx,一个body,啥也没看出来啊？
 还有,为啥要加个async ,去掉不行？
 
-从视觉入手，这几个最直观的点也最好解释。
-带着问题去思考问题，是我最喜欢的学习方式。
-ok,接下来，我们就看一下koa内部是如何处理请求的。
+从视觉入手,这几个最直观的点也最好解释。
+带着问题去思考问题,是我最喜欢的学习方式。
+ok,接下来,我们就看一下koa内部是如何处理请求的。
 
 
 ```js
@@ -112,24 +112,24 @@ class Application{
 
 ```
 
-这几行代码没什么玄机，所谓的use方法,不过是将接收的函数暂存，后续在handleRequest中执行。
+这几行代码没什么玄机,所谓的use方法,不过是将接收的函数暂存,后续在handleRequest中执行。
 
-handleRequest函数见名知意，用于处理请求。其实，也就是把原生http模块
-createServer的事件处理函数做了一个提取，并将上下文this指向我们自己
-写的Application类。其中，this.fn(ctx)这行代码，解释了为什么每一个请求处理函数都会接收ctx参数。
+handleRequest函数见名知意,用于处理请求。其实,也就是把原生http模块
+createServer的事件处理函数做了一个提取,并将上下文this指向我们自己
+写的Application类。其中,this.fn(ctx)这行代码,解释了为什么每一个请求处理函数都会接收ctx参数。
 
 
 
 ### createContext是什么？
  
-看名字是要创建上下文。是的，这就是koa独特的地方。
+看名字是要创建上下文。是的,这就是koa独特的地方。
 
 koa将原生http模块事件处理函数的req和res参数合二为一后又做了一层增强。
 最终的结果就是:req,res有的,ctx皆有。req,res没有的,ctx还有。
-对开发者而言，合二为一后完全无需关心某个方法是req的还是res的，直接一个ctx完事。
+对开发者而言,合二为一后完全无需关心某个方法是req的还是res的,直接一个ctx完事。
 
 
-说了这么多，我们就来看一下createContext的庐山真面目。
+说了这么多,我们就来看一下createContext的庐山真面目。
 
 ```js
 class Application{
@@ -154,22 +154,22 @@ class Application{
 
 ```
 
-为了便于理解，我在必要部分加了一些注释。
-暂且不管构造器里的context，request，response是什么，先只看createContext函数做了什么。
-里边有两行看起来很绕的连续赋值代码，其实就是往ctx上挂载东西。
+为了便于理解,我在必要部分加了一些注释。
+暂且不管构造器里的context,request,response是什么,先只看createContext函数做了什么。
+里边有两行看起来很绕的连续赋值代码,其实就是往ctx上挂载东西。
 
-比如你用原生http模块结束响应是res.end(),那现在可以用ctx.res.end()，也可以用ctx.response.res.end()。
-req和res是一样的道理，这里就不再赘述了。
+比如你用原生http模块结束响应是res.end(),那现在可以用ctx.res.end(),也可以用ctx.response.res.end()。
+req和res是一样的道理,这里就不再赘述了。
 
 
 ### request和response
 
 
-到这里，我们之前疑惑的use,ctx已经解释完。在进一步解释async和body前，我们暂且引出一个新的问题。
+到这里,我们之前疑惑的use,ctx已经解释完。在进一步解释async和body前,我们暂且引出一个新的问题。
 request和response与http模块事件处理函数的req,res的关系是什么？
 
-首先可以肯定的是，绝不是同一个东西。但是，request和response是对req和res的一个增强。
-这两个文件，是koa单独搞出来的，其内部使用了getter,setter。
+首先可以肯定的是,绝不是同一个东西。但是,request和response是对req和res的一个增强。
+这两个文件,是koa单独搞出来的,其内部使用了getter,setter。
 
 
 先来看一个request的简单示例：
@@ -183,10 +183,10 @@ const request={
 module.exports=request
 ```
 
-这里的this指向request对象，但仅这样还看不出玄机，别忘了在createContext方法中的request身上恰好挂了一个req。
+这里的this指向request对象,但仅这样还看不出玄机,别忘了在createContext方法中的request身上恰好挂了一个req。
 这意味着什么？意味着访问ctx.request.req 就是访问原生req。
 
-举个例子：上边request中的url访问方式看似是ctx.request.url，实际上是ctx.request.req.url。
+举个例子：上边request中的url访问方式看似是ctx.request.url,实际上是ctx.request.req.url。
 
 
 
@@ -198,7 +198,7 @@ app.use(ctx => {
 ```
 
 
-也许你会觉得，这个例子看起来好像是代理啊，如何起到增强作用呢?
+也许你会觉得,这个例子看起来好像是代理啊,如何起到增强作用呢?
 
 
 ```js
@@ -213,12 +213,12 @@ const request = {
 
 ```
 
-个人习惯问题，在写代码时会纠结是headers还是header。
-koa考虑的很人性化，不管你用哪种，都对，最终都是访问的headers。
-从这点考虑，岂不就是容错性的增强？当然，实际的增强并不仅限于此，甚至可以自定义你想要的业务逻辑。
+个人习惯问题,在写代码时会纠结是headers还是header。
+koa考虑的很人性化,不管你用哪种,都对,最终都是访问的headers。
+从这点考虑,岂不就是容错性的增强？当然,实际的增强并不仅限于此,甚至可以自定义你想要的业务逻辑。
 
 
-response和request同理，这里不再赘述。只提最关键的一点，body。
+response和request同理,这里不再赘述。只提最关键的一点,body。
 
 
 ```js
@@ -236,11 +236,11 @@ module.exports = response
 
 
 这样一看是不是body也没那么神奇了呢？不过就是一个变量而已。
-若是访问，直接返回变量_body;若是设置，接收新值完成更新。
+若是访问,直接返回变量_body;若是设置,接收新值完成更新。
 
 
-也许你会好奇，ctx.body和这个body是一个东西吗？是的，当然是。
-那它们是如何关联上的？看起来是代理？是的，就是代理，通过context。
+也许你会好奇,ctx.body和这个body是一个东西吗？是的,当然是。
+那它们是如何关联上的？看起来是代理？是的,就是代理,通过context。
 
 
 ### 神奇的context代理
@@ -285,8 +285,8 @@ ctx做的请求相关的,一定是交给request。
 ### 神奇的组合能力:compose
 
 
-到这里我们之前提到的疑惑只剩下async尚未解决，接下来就深入展开一波。
-在探究compose函数实现前，先来想一下为什么需要组合？解决了什么问题？
+到这里我们之前提到的疑惑只剩下async尚未解决,接下来就深入展开一波。
+在探究compose函数实现前,先来想一下为什么需要组合？解决了什么问题？
 
 
 
@@ -298,7 +298,7 @@ app.use(koaStatic())
 
 ```
 
-koa中，use函数可以多次调用,但是默认情况下只会执行第一个。
+koa中,use函数可以多次调用,但是默认情况下只会执行第一个。
 后边的如果想执行,需要上游调用next函数,也就是use函数的第二个参数。
 那如何涉及异步怎么搞？这就是async的意义所在。
 多个中间件如何执行呢？这就是compose函数的意义。(洋葱模型)
@@ -332,11 +332,11 @@ app.use((ctx, next) => {
 
 
 接下来我们来研究一波它的实现。
-核心三要素，按存储顺序依次执行，支持异步，洋葱模型。
+核心三要素,按存储顺序依次执行,支持异步,洋葱模型。
 
 ```js
 
-//做一个小小的改造，支持多个use调用
+//做一个小小的改造,支持多个use调用
     use(fn){
         this.middlewares.push(fn)
     }
@@ -363,9 +363,9 @@ app.use((ctx, next) => {
 
 
 
-到这里，compose实现基本就完活了，边界细节可以去看koa-compose。
+到这里,compose实现基本就完活了,边界细节可以去看koa-compose。
 
-上边有提到最后要返回promise，看起来有些突兀。莫慌，补上最后一波代码就可以理解了。
+上边有提到最后要返回promise,看起来有些突兀。莫慌,补上最后一波代码就可以理解了。
 
 
 
@@ -377,8 +377,8 @@ app.use((ctx, next) => {
 
         const ctx = this.createContext(req, res)
       //组合中间件 并执行返回后的promise,获取到_body 响应出去
-      //注意看这里，是有一个then的
-      //这就意味着最后不管你写的函数加不加async，进了compose，都是异步
+      //注意看这里,是有一个then的
+      //这就意味着最后不管你写的函数加不加async,进了compose,都是异步
         this.compose(ctx).then(() => {
              //默认只能处理buffer 和string
             let _body = ctx.body;
@@ -410,9 +410,9 @@ app.use((ctx, next) => {
 ```
 
 
-到这里核心部分就都解释完了，源码我会以压缩包形式给出。
+到这里核心部分就都解释完了,源码我会以压缩包形式给出。
 
-最后来一波加餐，中间件的实现,本质就是函数返回一个接收ctx,next为参数的异步函数。
+最后来一波加餐,中间件的实现,本质就是函数返回一个接收ctx,next为参数的异步函数。
 
 
 
@@ -468,10 +468,10 @@ __defineGetter__: https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Refere
 
 ## 再会
 
-情如风雪无常，
+情如风雪无常,
 
 却是一动既殇。
 
-感谢你这么好看还来阅读我的文章，
+感谢你这么好看还来阅读我的文章,
 
-我是冷月心，下期再见。
+我是冷月心,下期再见。
