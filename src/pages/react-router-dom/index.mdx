@@ -1,0 +1,679 @@
+---
+title: 'react-router核心功能实现'
+date: '2021-02-14'
+spoiler: react-router核心功能实现
+---
+
+
+
+## 前言
+
+
+不管对于前端还是后端,路由都极为重要。虽都叫路由,但二者概念和功能并不相同。
+前端路由指的是当用户访问路径与路由配置路径匹配时,渲染对应的组件;
+后端路由指的是当用户访问路径与路由配置路径匹配时,执行某段业务逻辑(通常是数据接口)。
+
+我们开发常用的其实是react-router-dom，但它依赖了react-router。而react-router可谓是面试高频。
+当然，最主要的还是hash路由和browser路由模型的应用和原理。
+此外,Route,Link,AuthRouter,NavLink,Redirect,Switch,WithRouter，Prompt也是常考点。
+
+
+本篇为源码系列核心实现第五篇,对应下图react-router部分。
+
+
+![src](https://lengyuexin.github.io/gatsby/static/src-c54cf51e73a8fdc229c79ea7b981b607.png)
+
+
+|||
+|--|--|
+|name|desc|
+|hashRouter|基于hashChange实现的路由|
+|browserRouter|基于history核心api实现的路由|
+|Route|用于路径匹配和routeProps传递|
+|Link|点击可跳转到指定路径的链接|
+|NavLink|在Link基础上，命中路由添加active类名|
+|AuthRouter|权限路由|
+|Redirect|重定向路由|
+|Switch|单一匹配|
+|WithRouter|高阶组件，可使被包裹组件获得routeProps|
+|Prompt|阻止跳转(非预期行为)|
+
+
+温馨提示：为便于演示，贴出的代码会做些简化，建议结合文末源码自行编写测试用例感受下。
+
+## 宏观认知
+
+
+### 基本原理
+
+在关注某个功能点实现前，先来一个宏观认知或许会更容易理解。
+不论是hashRouter还是browserRouter，它们其实都只干了一件事:根据用户的不同访问路径，切换不同组件显示。
+
+确切的说，这两个东西都算是容器。
+它们用来获取location,history等有意义的对象，并传递给子组件Route。
+路径匹配，组件渲染什么的，其实都是在Route里实现的。
+
+这里会涉及一个十分重要的点，如何监听路由变化？
+
+并不玄奥，hash路由通过监听window的hashchange事件实现，
+browser路由使用原生history 的pushstate和onpopstate实现。
+
+
+无独有偶，vue-router和react-router在实现上大同小异，在browser路由上二者都有用到history api。
+不同的是react-router是用了一个单独的第三方包，就叫history。vue-router则是自己新建了一个history文件夹，
+自己搞了一套，但底层实现上都差不多。
+
+
+
+### 路由初体验
+
+
+**hash**
+
+当点击不同链接的时候，hash值会发生改变，这种改变会被hashchange事件监听到。
+
+```html
+    <div>
+        <a href='#/a'>a页面</a>
+        <a href='#/b'>b页面</a>
+    </div>
+    <script>
+        window.addEventListener('hashchange',()=>{
+           console.log( window.location.hash)
+        })
+    </script>
+</body>
+
+
+```
+
+**browser**
+
+以下是一个mdn的例子，感觉还挺经典的。
+
+```js
+
+window.onpopstate = function(event) {
+  alert("location: " + document.location + ", state: " + JSON.stringify(event.state));
+};
+ //添加并激活一个历史记录条目 http://example.com/example.html?page=1,条目索引为1
+history.pushState({page: 1}, "title 1", "?page=1");
+ //添加并激活一个历史记录条目 http://example.com/example.html?page=2,条目索引为2  
+history.pushState({page: 2}, "title 2", "?page=2");
+//修改当前激活的历史记录条目 http://ex..?page=2 变为 http://ex..?page=3,条目索引为3   
+history.replaceState({page: 3}, "title 3", "?page=3"); 
+history.back(); // 弹出 "location: http://example.com/example.html?page=1, state: {"page":1}"
+history.back(); // 弹出 "location: http://example.com/example.html, state: null
+history.go(2);  // 弹出 "location: http://example.com/example.html?page=3, state: {"page":3}
+
+```
+
+
+window.onpopstate是popstate事件在window对象上的事件处理程序。
+每当处于激活状态的历史记录条目发生变化时,popstate事件就会在对应window对象上触发。
+
+值得注意的是，调用history.pushState()或者history.replaceState()不会触发popstate事件。
+该事件只会在浏览器某些行为下触发, 比如点击后退、前进按钮。
+又或者，js中调用history.back、history.forward、history.go方法。
+此外,a 标签的锚点也会触发该事件.
+
+
+
+
+
+## hashRouter实现
+
+
+```js
+
+class HashRouter extends React.Component {
+  LocationState;
+  state = {
+    location: {
+      pathname: window.location.hash.slice(1),
+    },
+  };
+
+  componentDidMount() {
+    window.addEventListener("hashchange", (e) => {
+      this.setState({
+        location: {
+          ...this.state.location,
+          pathname: window.location.hash.slice(1) || "/",
+          state: this.LocationState,
+        },
+      });
+    });
+
+    window.location.hash = window.location.hash || "/";
+  }
+
+  render() {
+    let that = this;
+
+    let contextVal= {
+      location: this.state.location,
+      history: {
+        push(to) {
+          if (typeof to === "object") {
+            window.location.hash = to.pathname;
+            that.LocationState = to.state;
+          } else {
+            window.location.hash = to;
+            that.LocationState = null;
+          }
+        },
+      },
+    };
+
+    return (
+      <RouterContext.Provider value={contextVal}>
+        {this.props.children}
+      </RouterContext.Provider>
+    );
+  }
+}
+
+
+
+```
+
+
+从上面的代码可以看出，hasnRouter做了三件事。
+
+1. 通过context将location,history传递给了子组件(其实就是Route)。
+2. 通过hashchange监听路由变换,更新state。
+3. 根据Link标签传递的to属性类型做不同处理。(本质是调用push方法来改变hash值)
+
+
+
+
+## BrowserRouter实现
+
+
+
+
+### 重写history.pushstate
+
+重写是为了在浏览器地址变更的时候,更新对应的视图。
+还有就是，改变一下函数接收的参数,title基本上没什么用。
+
+如果你用的官方脚手架，下面这个代码可放在index.html中。
+
+
+```js
+
+    !(function (history) {
+      var pushState = history.pushState
+      history.pushState = function (state, title, pathname) {
+        if (typeof window.onpushstate === 'function') {
+          window.onpushstate(state, pathname)
+        } 
+        //走旧的是为了更新url 执行新的是为了更新ui
+         pushState.apply(history, arguments)
+      }
+
+    }(window.history))
+
+
+```
+
+### BrowserRouter
+
+
+在继续深入前，先了解下BrowserRouter的触发链路。
+
+点击某个链接(Link),调用push方法将访问路径传递过去。
+BrowserRouter内部会通过pushState函数更新浏览器地址和react内部状态。
+接着，这个变更后的状态会通过context传递到子组件中(Route)。
+
+至于之后路径匹配，组件渲染什么的，都是Route的事。
+BrowserRouter只是容器，和HashRouter一样，把该传递的传递了就行。
+
+
+```js
+ class BrowserRouter extends React.Component{
+  LocationState;
+  state = {
+    location: {
+      pathname: "/",
+    },
+  };
+
+  componentDidMount() {
+    //触发popstate的时候 会执行此函数
+    window.onpopstate = (e) => {
+      this.setState({
+        location: {
+          ...this.state.location,
+          pathname: document.location.pathname,
+          state: e.state,
+        },
+      });
+    };
+
+    //触发pushstate的时候 会执行此函数
+    //这里结合重写后的history.pushstate会更好理解
+    window.onpushstate = (state,pathname) => {
+      this.setState({
+        location: {
+          ...this.state.location,
+          pathname: pathname,
+          state: state,
+        },
+      });
+    };
+    
+  }
+
+  render() {
+    let contextVal = {
+      location: this.state.location,
+      history: {
+        push(to) {
+          if (typeof to === "object") {
+            window.history.pushState(to.state, "", to.pathname);
+          } else {
+            window.history.pushState(null, "", to);
+          }
+        },
+      },
+    };
+
+    return (
+      <RouterContext.Provider value={contextVal}>
+        {this.props.children}
+      </RouterContext.Provider>
+    );
+  }
+}
+
+
+
+```
+
+
+
+
+## Route源码
+
+**路径匹配和组件渲染**
+
+Route是一个十分核心的组件，主要用于路径匹配和组件渲染。
+
+它从容器组件传递下来的location对象中获取用户访问路径pathname，
+又从props中接收外部传递的path属性和component属性。
+通过pathname和path的一致性进行比对，并决定是否渲染component。
+这是最常用的匹配。
+
+
+
+```js
+ class extends React.Component {
+  static contextType = RouterContext;
+
+  render() {
+    let { path, component: RouteComponent, exact } = this.props;
+
+    let pathname = this.context.location.pathname;
+    let routeProps = {
+      location: this.context.location,
+      history: this.context.history,
+    };
+
+    if (exact) {
+      return pathname === path ? <RouteComponent {...routeProps} /> : null;
+    } else {
+      return pathname.startsWith(path) ? (
+        <RouteComponent {...routeProps} />
+      ) : null;
+    }
+  }
+}
+
+
+```
+
+
+
+**Route渲染的三种方式**
+
+除了component外，还有两种不太常用但也很好用的渲染组件方式:childre和render。
+至于其内部如何实现，以及动态路由参数的实现，在文末源码会有体现，这里就不再贴代码了。
+
+```js
+
+<Switch>
+    <Route exact path="/"> <Home /></Route>
+    <Route path="/about" component={About} />
+    <Route path="/dashboard" children={<Dashboard />} />
+    <Route path="/news" render={()=><News />} />
+    <Route path="/games" component={()=><Games/>} />
+</Switch>
+
+```
+
+
+接下来就是一些小东西了，基本上看代码就能懂大概思路。
+
+
+## Link
+
+Link 本质是a标签,只不过跳转方式变成了点击执行push方法,其本质是改变hash。
+
+
+
+```js
+
+ class Link extends React.Component {
+  static contextType = RouterContext;
+
+  render() {
+    return (
+      <a
+        href={
+          "#" +
+          (typeof this.props.to === "object"
+            ? this.props.to.pathname
+            : this.props.to)
+        }
+        onClick={() => {
+          this.context.history.push(this.props.to);
+        }}
+      >
+        {this.props.children}
+      </a>
+    );
+  }
+}
+
+
+```
+
+
+## NavLink
+
+
+NavLink 本质上是对Link的一个加强,在匹配上对应的路由后添加一个active类名，可使用css自定义样式。
+其他方面，使用方式和传参都和Link一样。
+
+```js
+
+//判断地址栏路径和to里的路径是否一致,一致则添加active类名
+let NavLink = (props: Props) => {
+  let { to, exact, children } = props;
+
+  return (
+    <Route
+      path={to}
+      exact={exact}
+      children={(childrenProps) => {
+        return (
+          <Link
+            className={childrenProps.match ? "active" : ""}
+            to={to}
+            {...childrenProps}
+          >
+            {children}
+          </Link>
+        );
+      }}
+    />
+  );
+};
+
+
+```
+
+## Switch
+
+Switch 包裹的组件只会匹配第一个,不会重复匹配
+
+
+```js
+
+ class Switch extends React.Component {
+  static contextType = RouterContext;
+
+
+  render() {
+    //从context获取的路径与子组件进行匹配
+    let pathname = this.context.location.pathname;
+    if (!this.props.children) return null;
+
+    let children;
+
+    children = Array.isArray(this.props.children)
+      ? this.props.children
+      : [this.props.children];
+
+    //此处不用forEach是因为它无法中途return
+    for (let i = 0; i < children.length; i++) {
+      let child = children[i];
+      const { path = "/", exact = false } = child.props;
+      let paramsName = [];
+      let regexp = pathToRegexp(path, paramsName, { end: exact });
+      let res = pathname.match(regexp);
+      //一旦匹配到后续就不再匹配
+      if (res) return child;
+    }
+
+    return null;
+  }
+}
+
+
+```
+
+## Redirect
+
+如果所有路径都没匹配,会跳转到Redirect to 指定的页面。
+这个一般放在Switch内部最后位置，用于兜底。
+此外，Redirect也可以结合权限路由使。比如登录验证，不符合预期就重定向到登录页。
+
+
+```js
+ class Redirect extends React.Component {
+  static contextType = RouterContext;
+  render() {
+    this.context.history.push(this.props.to);
+    return null;
+  }
+}
+
+
+```
+
+
+## 权限路由
+
+渲染对应路径的组件前先判断是否有权限，有则渲染,否则重定向到指定页面。
+
+权限路由=Route+自定义逻辑。
+
+```js
+
+  let Protected = (props: Props) => {
+  let { path, component: RouteComponent } = props;
+
+  return (
+    <Route
+      path={path}
+      render={(renderProp) => {
+        if (window.localStorage.getItem("auth") === "success") {
+          return <RouteComponent {...props} {...renderProps} />;
+        } else {
+          return <Redirect to="/" />;
+        }
+      }}
+    />
+  );
+};
+
+```
+
+
+
+## withRouter
+
+withRouter相比其他几个可能不太常用，但某些特定场景需要用到它。
+事实上，只有被容器包裹的Route才能从容器身上拿到上下文对象,从而获取history,location,match等属性。
+对于非路由渲染的组件(如APP组件)要想拿到这些属性，需要使用withRouter。
+
+
+但仅仅如此也是不够的，真正数据来源还是在容器。只有容器才会通过context传递history,location,match等属性。
+withRouter作为一个高阶组件,它会将上下文传递的属性交给被包裹的组件(App)。
+所以withRouter包裹的组件,必须放在路由容器里才会生效。
+
+**容器包裹**
+
+```js
+import {BrowserRouter} from 'react-router-dom'
+import App from './App'
+const el=<BrowserRouter><App/></BrowserRouter>
+render(el,document.getElementById('root'))
+
+
+```
+
+**WithRouter实现**
+
+```js
+
+
+import React, { ComponentType } from "react";
+import { Route, RouteComponentProps } from "./";
+
+let WithRouter = (Component) => {
+  //外层参数 如<App xxx={xxx}/>
+  return (props: any) => {
+    // 内层路由参数透传
+    return (
+      <Route
+        render={(routeProps: RouteComponentProps) => (
+          <Component {...routeProps} {...props} />
+        )}
+      />
+    );
+  };
+};
+
+export default WithRouter;
+
+
+
+```
+
+
+## 阻止跳转
+
+阻止跳转的目的是对用户的误操作造成的非预期行为进行提示。
+比如填写了一半的表单,用户不小心点了其他链接,再回来表单被清空了，这就很难受。
+
+
+```js
+class Prompt extends React.Component{
+  static contextType = RouterContext;
+  render() {
+    const { when, message } = this.props;
+    if (when) {
+      this.context.history.block(message);
+    } else {
+      this.context.history.block(null);
+    }
+    return null;
+  }
+}
+
+
+```
+
+
+其处理逻辑是对标志信息的收集,在点击Link时候，push方法执行,根据标志位进行弹窗提示。
+如果用户取消,则不跳转,反之,跳转。确切的说，这部分逻辑是放在了push方法中。
+
+
+```js
+//容器组件中
+let contextVal= {
+  location: this.state.location,
+  history: {
+    push(to) {
+      if (this.message) {
+        let flag = window.confirm(
+          this.message(typeof to === "object" ? to.pathname : to)
+        );
+
+        if (!flag) return;
+      }
+      if (typeof to === "object") {
+        window.history.pushState(to.state, "", to.pathname);
+      } else {
+        window.history.pushState(null, "", to);
+      }
+    },
+    block(message) {
+      this.message = message;
+    },
+  },
+};
+
+
+```
+
+
+为了便于理解，最后补一个小测试案例。
+
+
+```js
+
+function A(props) {
+  const [jump, setJump] = useState(false);
+  const [val, setVal] = useState("");
+
+//如果输入框的值无效 就直接跳
+// 如果值有效  弹框提示
+  useEffect(() => {
+    if (val.length === 0) {
+      setJump(false);
+    } else {
+      setJump(true);
+    }
+  }, [val]);
+
+  return (
+    <div>
+      <Prompt
+        when={jump}
+        message={(location: string) => `Do you want to go ${location}?`}
+      />
+      <form>
+        <input value={val} onChange={(e) => setVal(e.target.value)} />
+        <input type="submit" value="按我" />
+      </form>
+    </div>
+  );
+}
+
+
+```
+
+
+
+## 相关链接
+
+- https://developer.mozilla.org/zh-CN/docs/Web/API/Window/onpopstate
+
+## 源码压缩包
+
+- https://github.com/lengyuexin/code
+
+## 再会
+
+情如风雪无常,
+
+却是一动既殇。
+
+感谢你这么好看还来阅读我的文章,
+
+我是冷月心,下期再见。
