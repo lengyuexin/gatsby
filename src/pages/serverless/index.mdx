@@ -1,0 +1,302 @@
+---
+title: '聊一聊Serverless'
+date: '2021-02-18'
+spoiler: 聊一聊Serverless
+---
+
+
+## Serverless是什么
+
+从单词角度理解,server译为服务，less译为少，Serverless可以理解为无服务或轻服务。
+
+从语义角度理解，之所以叫轻服务，是因为和传统的PaaS(平台即服务)相比，用户不需要关心服务器的部署与配置。但这并不意味着不需要服务器，只是这些东西皆由云平台来提供。
+
+从架构角度理解，Serverless=FaaS+事件驱动+BaaS=无服务器计算(Serverless computing)
+
+- Faas:Function as a Service,函数即服务
+- 事件驱动：通过事件触发的形式去完成函数的调用，处理请求和响应（如定时任务/http请求...）
+- Baas:Backend as a Service 后端即服务
+
+
+
+## 云计算发展过程
+
+
+
+下图为云计算发展的整个过程，同时也是Serverless的发展过程，共分为四个阶段。
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20210217142302645.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+
+
+**物理机阶段**：此时如果进行一个网站的开发是极为麻烦的，不仅需要购置物理机，还要手动安装各种运行环境，开发，部署，测试，上线。除此之外，还要在物理层面上解决电，网，硬件磨损等各种问题。
+
+**IaaS阶段**：IaaS指的是基础设施即服务。随着虚拟化技术的不断发展，出现了很多基于虚拟化的云厂商和产品，如阿里云ESC。这个阶段，无需自建机房，采购以及配置硬件设施，云平台会提供这些基础设施。也正因如此，那些物理层面的电，硬件磨损什么的，用户无需关注。
+
+**PaaS阶段**：PaaS指的是平台即服务。所谓的平台，其实是结合业务发展，在IaaS基础上，将一些如数据库，中间件等通用功能做成服务。虚拟化技术可以让用户不必关心硬件问题，后来出现的容器技术可以让用户不必关心运行环境差异的问题。容器技术出现后，意味着服务器上部署的不再是应用，而是容器。当容器多了后，可通过k8s进行管理。
+
+**Serverless阶段**：这个阶段是真正解放生产，专注业务的阶段。在FaaS层面，应用由诸多个独立的函数组成，每个函数实现各自的业务逻辑。在数据获取层面，BaaS 将后端能力封装成了服务，并以接口的形式提供给FaaS。事实上，数据库的增删改查刚好对应Restful API的POST/DELETE/PUT/GET。
+
+## Serverless的优势
+
+**专注业务，快速迭代**
+
+首先，云平台从开发人员手中接过服务部署，配置等运维工作，开发人员压力减小，只需关注业务开发本身即可。其次，传统开发模式下，一个完整的开发流程需要经过前后端并行开发，后端部署，联调测试，上线等过程，比较繁杂。而Serverless可以让前端人员跨过server直接和数据库交互(FaaS+BaaS)，极大地简化了开发流程。
+
+**节省维护和运营成本**
+
+服务提供方无需在业务上线前预估资源，也无需单独购置服务器。Serverless会根据实际请求数量进行自动扩缩容，实行按需计费。在空闲情况下，凭借短时间内完成冷启动的优势，Serverless可以缩容的极致为0，即无任何计算消耗，这也是PaaS做不到的。从这点上考虑，那些每天大部分时间都没有流量或者有很少流量的应用是极为适合Serverless落地的。
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20210217142355722.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+
+## Serverless的不足
+
+**状态管理能力弱(针对FaaS)**
+
+为了保证可以自动扩缩容，FaaS应用就必须是无状态的。有状态的服务就要考虑数据的存储，需要BaaS的支持。
+
+**调试困难**
+
+本地环境和云环境始终是有区别的，有些报错信息只能在云环境查看，而且某些问题不太容易定位是本地环境还是云环境的产生的。
+
+## 云函数
+
+**定义**
+
+云函数可以看作是Serverless的产品之一，每一个函数都可以看作是一个服务。
+
+与此同时，云函数也具备FaaS能力，是FaaS模式的具体实现。
+
+**触发器**
+
+触发器用于触发某一类事件，不同云平台支持的触发器类型也可能不同，但基本上每个云平台都会包含HTTP触发器和定时触发器两大类型。
+
+HTTP触发器对于客户端而言，就是一个可访问的数据接口。
+
+定时任务类型的触发器,会在指定时间周期内执行某一任务。
+
+为限制频繁调用，几乎所有云平台都会对定时的时间粒度进行限制，如最小一分钟。
+
+**体验**
+
+- [doc](https://main.qcloudimg.com/raw/document/product/pdf/583_9177_cn.pdf)
+- [scf](https://cloud.tencent.com/login?s_url=https://console.cloud.tencent.com/scf/list?rid=1&ns=default)
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20210217142537639.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+
+### 冷启动
+
+
+
+**定义**
+
+在Serverless computing世界中，函数是按需运行的，如果没有请求，就不会有函数实例占用函数服务资源。这种仅在必要时运行函数的整个执行过程，被称为冷启动。
+
+下图为冷启动包含的阶段以及云厂商和开发者各自所负责的部分。
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20210217142616199.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+
+
+
+- **下载代码：** FaaS 平台本身不会存储代码，这也是为了能够缩容到0。上传或自己编写的代码实际上会被放在存储服务中，在冷启动过程中会从存储服务中获取函数代码后下载。
+- **启动容器：** 代码下载完成后，FaaS 会根据函数的配置，启动对应容器。也正是通过容器技术，FaaS 可保证每个函数的独立性。
+- **初始化运行环境：** 分析代码依赖、执行用户初始化逻辑、初始化入口函数之外的代码等。
+- **运行代码：** 调用入口函数执行代码。这个阶段比较特别，可能是冷启动，也可能是热启动。
+
+
+
+### 热启动
+
+FaaS有两种模式，一种是用完即毁，对应从0到1的冷启动。
+
+另一种是常驻内存，对应函数实例可复用的热启动（串行）。
+
+常驻不是永久，如果一段时间内没有事件触发，函数实例还是会被销毁的。
+
+热启动虽然在一定程度上可以提高请求处理效率和应用性能，但某些情况下也要特别注意，热启动可能不是我们想要的。
+
+在某些涉及时间的场景，我们需要将时间的生成放在入口函数中用以保证每次函数执行后时间重新计算。如果这部分代码放在入口函数之外，那么在最初冷启动后，热启动使用的一直就是旧的时间，且不会更新。
+
+**请求响应链路**
+
+解释完冷启动后，再来看一下完整的请求响应链路。
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/2021021714265361.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+
+
+
+1. 用户发起请求，触发器接收
+2. 事件驱动，触发器通知函数服务处理http请求
+3. 函数服务进行函数实例检查，有则调用，没有则从函数代码仓库拉取后创建再调用
+4. 函数将处理完的结果交给触发器
+5. 触发器将其响应到客户端用户
+6. 一段时间内若无事件触发，FaaS应用缩容至0
+
+
+
+
+
+
+
+### 函数实例
+
+
+
+每一个函数实例背后都是一个容器。FaaS 通过容器来隔离每个函数实例，保证函数的独立性。
+
+如下图所示，容器内最主要的是运行环境，包含编程语言，内置模块，FaaS 内置依赖和函数代码。
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20210217142857728.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+
+
+
+
+- **编程语言**：创建FaaS应用所指定的语言，如Node
+- **内置模块**：所选编程语言的内置模块，如fs之于Node
+- **FaaS 内置依赖**：FaaS平台为便于开发者开发提供的某些默认依赖
+- **函数代码**：自己编写的代码
+
+
+
+
+
+### 不同语言冷启动时长排名
+
+不同语言的冷启动时长是有差异的，下图为不同语言的冷启动时长排名。
+
+横坐标为分配的内存空间，纵坐标为平均冷启动时长，单位ms
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20210217142930819.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+
+
+从上图我们可以看到两个关键信息：
+
+- 分配的内存空间越大，冷启动时长越短
+- Nodejs冷启动时间是最短的
+
+
+
+### 首次调用超时
+
+
+
+- 冷启动快慢时长差距还是很明显的，从毫秒级到秒级甚至分钟级皆有可能。
+- 对于Node这种能够短时间内完成冷启动的语言来说，一定程度上就是FaaS应用敢缩容到0的底气。
+- 但是像java这种冷启动时间比较久的语言，就有可能出现首次调用超时的问题。
+
+
+
+
+
+### 性能优化
+
+
+
+Serverless性能瓶颈主要在冷启动耗时上，所以性能优化也是从这方面入手。
+
+**预热：** 其本质是将冷启动提前**。**使用热启动的方式对要执行的函数进行提前触发，用以完成耗时的冷启动过程。这样在某个流量峰值，运行的代码就都是热启动的形式，处理效率和应用性能提高。
+
+**减小代码体积：** 函数应用实例收缩到0后，当有新的请求到来，需要下载代码。如果代码体积太大，这个过程就会十分耗时。通过压缩，按需引入等方式对代码进行精简，可减少冷启动耗时。
+
+**提高并发配额：** 默认情况下一个函数实例只能处理一个请求，但可通过提高并发配额进而提高函数的处理能力。如额度为3，则一个函数实例现在可处理三个请求，相比之前少了两次冷启动的过程。 并发限制数量取决于分配的内存大小，对于腾讯云来说，128内存下，最大并发为900。
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20210217143003725.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+
+**选择冷启动耗时少的语言 ：** 如node,python
+
+## SFF
+
+BFF(Backend For Frontend)和SFF(Serverless For Frontend)解决的是同一个问题，作为前后端数据通信的中间层，把后端返回的不符合前端预期的元数据转成前端预期的数据格式。
+
+出现这种非预期格式的元数据，大多是微服务导致的(一个后端接口数据来自多个后端应用)。
+
+相比BFF,SFF用完即毁的特点体现的更明显：请求-转换-响应-空闲-缩容为0。
+
+从这点考虑Serverless也适合用于中间层数据处理。
+
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20210217143026374.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+
+
+## BaaS
+
+
+
+FaaS适用于那些无状态场景，而涉及数据存储等有状态的场景，就需要BaaS的支持。
+
+举个例子，计算PV（page view）.
+
+
+
+```js
+let pv = 0;
+
+function handler(event) {
+
+  pv++;
+
+  return pv;
+
+}
+```
+
+对于FaaS来说，这种统计其实并不精准。如果一段时间没有新的事件触发，函数执行完后，它的运行环境就会被销毁，函数实例收缩为0。当下一次请求过来时，函数应用会创建一个新的实例，该实例会初始化一个新的运行环境，之前的状态不会被保留。
+
+这种情况下，就需要BaaS的配合了。BaaS服务于FaaS ，可以让FaaS通过接口调用形式来使用 BaaS，完成存储数据，比如阿里云的表格存储（相当于一个NoSQL数据库）。
+
+```js
+const tablestore = require('tablestore');
+
+async function handler(event) {
+
+  let pv = await tablestore.get();
+
+  pv += 1;
+
+  await tablestore.save(pv);
+
+  return pv;
+
+}
+```
+
+
+
+这样入库后，即使FaaS应用收缩为0，统计数据也不会受到影响。
+
+
+
+
+## 再会
+
+情如风雪无常,
+
+却是一动既殇。
+
+感谢你这么好看还来阅读我的文章,
+
+我是冷月心,下期再见。
+
+## 推荐阅读
+
+- [结合阿里云 FC 谈谈我对 FaaS 的理解 ](https://juejin.cn/post/6892728697082609672)
+- [AWS Lambda 最新编程语言冷启动时间测试：Node.js 性能最高](https://www.infoq.cn/article/7flvicetoviyajkmgb1c)
+- [Serverless入门课](https://time.geekbang.org/column/intro/305)
+- [玩转 Serverless 架构](https://kaiwu.lagou.com/course/courseInfo.htm?courseId=589#/content)
