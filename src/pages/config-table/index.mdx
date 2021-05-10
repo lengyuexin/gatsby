@@ -1,0 +1,368 @@
+---
+title: '神奇的配置表思维'
+date: '2021-05-10'
+spoiler: 神奇的配置表思维
+---
+
+
+
+## 前言
+最近在做的业务中涉及到**多分支组合条件**的情况，频繁用if else 或者switch case 手动判断每个条件实在是有些不够优雅，也太过于硬编码。
+
+深思许久，就那么一瞬间，灵光一闪，想起了实习时候导师教过的**配置表思维**，一阵改造后，直呼真香！！！
+
+今天我们就来聊一下什么是快乐星球！
+
+奥，不对，今天我们就来聊一下**什么是配置表思维，适用场景以及如何使用。**
+
+
+## 什么是配置表思维？
+
+简单来说，配置表思维就是**预先定义逻辑代码，将手动操控换成自动匹配**。
+
+更细致点说，就是将原本需要手动处理的多分支或者批量数据的业务逻辑代码抽象到一个配置映射或者配置列表中，当条件匹配时自动执行相关业务代码。前者多表现为对象，后者多表现为数组对象。
+
+## 配置表思维适用场景是什么？
+配置表思维其实能覆盖很多场景。结合我的使用经验来看，在处理多分支场景和批量数据渲染的时候是效果比较明显的。理论就不多说了，一千个读者就有一千个哈姆雷特。等看完这篇文章，你理解后是什么它就是什么。
+
+## 配置表思维怎么用？
+
+针对上述提到的两种情况，分别给出两段示例代码。
+
+### 多分支组合条件
+给定如下场景：语数英三门科目作为数据来源，分别具有数值，排行，周期这三个维度。
+
+需求是根据数据和维度的组合结果获取预期的视图。
+
+前端该怎么处理？后端又该怎么处理？
+
+![](https://img-blog.csdnimg.cn/20210509092925780.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+看到这里，第一个明显的问题就抛出来了: 数据和维度的组合不同，**筛选条件**也不同。这部分该如何控制呢？跟着感觉走就是if else 或者 switch case 。
+
+
+```javascript
+if(dataType ==='Chinese' && dimension ==='value'){
+	//渲染学生列表单选下拉框
+}else if(dataType ==='Chinese' && dimension==='ranking'){
+	//渲染学生列表多选下拉框
+}else if(dataType ==='Chinese' && dimension==='cycle'){
+	//渲染学生列表多选下拉框
+	//渲染历史月份周期单选下拉框
+}
+...
+```
+
+这个场景下数据和维度实际上3 x 3的组合，所以有九条分支。如果是4 x 4，5 x 5，堆起来的if else 会更多。有没有什么好的方式控制呢？
+
+
+**神奇的配置表思维要登场了！**
+
+**1. 定义配置**
+
+```javascript
+const DATA_TYPE={
+    Chinese:'Chinese',
+    math:'math',
+    English:'English',
+}
+
+const DIMENSION={
+   value:'value',
+   ranking:'ranking',
+   cycle:'cycle',
+}
+const map={
+    [`${DATA_TYPE.Chinese}${DIMENSION.value}`]:()=>{
+        return 学生列表单选下拉框
+    },
+    [`${DATA_TYPE.Chinese}${DIMENSION.ranking}`]:()=>{
+        return 学生列表多选下拉框
+    },
+    [`${DATA_TYPE.Chinese}${DIMENSION.cycle}`]:()=>{
+        return 学生列表多选下拉框和历史月份周期单选下拉框
+    },
+    // ....
+}
+
+```
+
+看完你也许会好奇为啥键值对中的值用函数而不是直接放最后返回的组件。
+
+写成函数的好处是你可以传递额外参数进来，比如把每个表单项的**value，onChange,style**传进来。
+
+这个看实际场景，如果不需要接收参数，直接返回组件也可以。
+
+**2. 渲染**
+
+```javascript
+render (){
+    return (
+        <div>
+            {map[`${this.state.dataType}${this.state.dimension}`]()}
+        </div>
+    )
+}
+```
+
+**3.后端处理**
+
+```javascript
+async function controller() {
+
+    // 获取前端传递参数 dataType,dimension
+    const map = {
+        [`${DATA_TYPE.Chinese}${DIMENSION.value}`]: handleChineseValue,
+        [`${DATA_TYPE.Chinese}${DIMENSION.ranking}`]: handleChineseRanking,
+        [`${DATA_TYPE.Chinese}${DIMENSION.cycle}`]: handleChineseCycle,
+        //...
+    }
+    return map[`${dataType}${dimension}`]()
+}
+
+//具体的业务处理函数
+async function handleChineseValue() { }
+async function handleChineseRanking() { }
+async function handleChineseCycle() { }
+```
+
+**4. 返回格式**
+
+该格式指的是上述每个视图业务处理函数最终的返回格式。
+```javascript
+{
+	viewType:'', //前端根据该字段决定视图如何展示 ，可自定义 如 viewType:'value'|'ranking'|'line'
+	viewData:'' //前端展示数据
+}
+```
+
+
+**5. 前端根据返回的视图类型和数据完成视图渲染**
+
+
+因为这东西更倾向思想层面，所以就不贴太多代码了。
+
+关键部分已经给出，重在思维的理解。
+
+如果觉得这个例子体现的不是很明显，可以再看看下面这个例子。
+
+
+### 数据的批量渲染
+
+举一个比较传统的例子，根据筛选条件确定表格中数据。
+
+![](https://img-blog.csdnimg.cn/20210509183611485.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+这部分我们还是只关心筛选条件的渲染，表格相关的就不贴了。
+
+```javascript
+
+  render() {
+    return (
+      <div style={{
+        width: 800
+      }}>
+
+        <Input style={{
+          width: 200,
+          margin: 20
+        }}
+          placeholder='name'
+        />
+        <Input style={{
+          width: 200,
+          margin: 20
+        }}
+          placeholder='age'
+        />
+        <Input style={{
+          width: 200,
+          margin: 20
+        }}
+          placeholder='address'
+        />
+        <Button type='primary'>查询</Button>
+      </div>
+
+    )
+
+
+  }
+```
+
+如果八九个呢？一直罗列下去会不会显得太冗长？
+
+其实这些表单元素公共东西太多了，完全可以抽离成配置表的形式。
+
+
+```javascript
+const list =[
+  {
+    type: Input,
+    placeholder: 'name',
+    style: {
+      width: 200,
+      margin: 20
+    },
+    key: 'name'
+  },
+  {
+    type: Input,
+    placeholder: 'age',
+    style: {
+      width: 200,
+      margin: 20
+    },
+    key: 'age'
+  },
+  {
+    type: Input,
+    placeholder: 'address',
+    style: {
+      width: 200,
+      margin: 20
+    },
+    key: 'address'
+  },
+]
+
+```
+
+**渲染**
+
+
+```javascript
+  render() {
+    return (
+      <div style={{
+        width: 800
+      }}>
+        {
+          list.map(item => {
+            const { type: Component, key, ...rest } = item
+            return <Component    {...rest} key={key}
+              value={this.state[key]}
+              onChange={e => {
+                this.setState({
+                  [key]: e.target.value
+                })
+              }}
+            />
+          })
+        }
+        <Button type='primary'>查询</Button>
+      </div>
+
+    )
+
+
+  }
+```
+
+
+上边是公用onChange场景，如果要定制每一个表单项的onChange，可以将list改成函数，将每个onChange传递进来
+
+
+```javascript
+const list = ({
+  name,
+  age,
+  address,
+  setName,
+  setAge,
+  setAddresss
+}) => [
+    {
+      type: Input,
+      placeholder: 'name',
+      style: {
+        width: 200,
+        margin: 20
+      },
+      key: 'name',
+      value: name,
+      onChange: setName
+    },
+    {
+      type: Input,
+      placeholder: 'age',
+      style: {
+        width: 200,
+        margin: 20
+      },
+      key: 'age',
+      value: age,
+      onChange: setAge
+    },
+    {
+      type: Input,
+      placeholder: 'address',
+      style: {
+        width: 200,
+        margin: 20
+      },
+      key: 'address',
+      value: address,
+      onChange: setAddresss
+    },
+  ]
+
+  render() {
+
+    const props = {
+      name: this.state.name,
+      age: this.state.age,
+      address: this.state.address,
+      setName: (e) => {
+        this.setState({
+          name: e.target.value
+        })
+      },
+      setAge: (e) => {
+        this.setState({
+          age: e.target.value
+        })
+      },
+      setAddresss: (e) => {
+        this.setState({
+          address: e.target.value
+        })
+      },
+    }
+    return (
+      <div style={{
+        width: 800
+      }}>
+        {
+          list(props).map(item => {
+            const { type: Component, ...rest } = item
+            return <Component    {...rest} />
+          })
+        }
+        <Button type='primary'>查询</Button>
+      </div>
+
+    )
+
+
+  }
+
+```
+
+比起直接罗列，这种方式看起来会更清晰一些。
+
+
+就这？就这？嗯，完了，希望这篇文章对你有所帮助。
+
+
+
+## 再会
+
+情如风雪无常,
+
+却是一动既殇。
+
+感谢你这么好看还来阅读我的文章,
+
+我是冷月心,下期再见。
