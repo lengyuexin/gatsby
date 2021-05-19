@@ -20,6 +20,21 @@ export default ({ location, themeToggle: onThemeToggle, theme }) => {
     },
     {
       name: (
+        <a
+          href="https://mp.weixin.qq.com/s/ejSNCFRcijah6q8u55Y65g"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            boxShadow: "none",
+          }}
+        >
+          内推
+        </a>
+      ),
+      // path: '/'
+    },
+    {
+      name: (
         <Link
           to={"/blog"}
           style={{
