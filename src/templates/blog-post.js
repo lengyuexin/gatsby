@@ -76,7 +76,6 @@
 //     } = this.props.pageContext;
 //     const lang = post.fields.langKey;
 
-
 //     translations = translations.slice();
 //     translations.sort((a, b) => {
 //       return codeToLanguage(a) < codeToLanguage(b) ? -1 : 1;
@@ -204,5 +203,3 @@
 //     }
 //   }
 // `;
-
-    
