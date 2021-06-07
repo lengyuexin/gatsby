@@ -21,7 +21,7 @@ export default ({ location, themeToggle: onThemeToggle, theme }) => {
     {
       name: (
         <a
-          href="https://mp.weixin.qq.com/s/ejSNCFRcijah6q8u55Y65g"
+          href="https://www.yuque.com/lengyuexin-7dwsi/hxha8y/wh7zpb"
           target="_blank"
           rel="noopener noreferrer"
           style={{
