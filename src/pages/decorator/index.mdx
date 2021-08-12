@@ -1,0 +1,392 @@
+---
+title: '小小装饰器'
+date: '2021-08-11'
+spoiler: 小小装饰器
+---
+
+
+## 前言
+
+装饰器可对指定的类/类方法/属性/参数进行装饰,扩展其功能。
+
+它本质是一个函数,底层实现上依赖Object.defineProperty。
+
+逐步发展至今,装饰器不再只是简化代码的语法糖,还可作为某些特定场景的解决方案(比如鉴权)。
+
+保持装饰器的单一职责,通过灵活组合,可以让代码更为简洁明了,让开发更为高效。
+
+下面以一个ts项目为例,介绍下常用类型装饰器的基本使用和业务场景。
+
+## 项目初始化
+
+1. 全局安装ts `npm install -g typescript`
+2. 新建文件夹并进入
+3. 生成package.json `npm init -y`
+4. 生成tsconfig.json `tsc --init`
+5. 项目中安装ts和ts-node `npm i typescript ts-node `
+6. 项目中安装nodemon `npm i nodemon`
+7. tsconfig中设置experimentalDecorators为true,添加装饰器支持
+8. package.json中添加运行脚本 start:`nodemon  -e  ts  --exec ts-node  src/app`
+9. 启动项目 `npm start`
+
+- ts-node将ts编译成js文件并执行
+- nodemon检测到目标文件发生更改后自动重启
+- nodemon -e 表示添加支持的文件扩展, --exec表示执行指定命令
+- 如果觉得隐式any 很不爽,可以在tsconfig中设置noImplicitAny为false
+
+
+## 基本使用
+
+### 类装饰器
+
+类装饰器作用在指定类上,target拿到的就是类的构造函数。
+
+拿到target后可以做很多事,比如增加额外的方法和属性。
+
+
+```ts
+
+const logName: ClassDecorator = target => {
+  // 反射api,形如target[prop]
+  // 下文还会用到反射
+  // npm上的 reflect-metadata也可以看看
+  const name = Reflect.get(target, 'name');
+  console.log(name);
+};
+
+@logName 
+class User {}
+
+
+```
+
+### 类方法装饰器
+
+类方法装饰器作用在类的方法上,有三个参数,分别是类的构造函数(静态方法)或者原型对象(实例方法),属性名和该属性的描述对象。
+
+```ts
+const check: MethodDecorator = (target, key, descriptor: PropertyDescriptor) => {
+ // 缓存旧函数,实际上就是装饰器作用的目标对象
+ // 这里指的是say方法
+ const fn = descriptor.value;
+ // 重写该方法,自定义一些逻辑
+ // 装饰要保留原有功能,所以最后要调用之前的旧方法
+  descriptor.value = function () {
+    if (target.constructor.name !== 'User') {
+      console.error('method say must called by class User');
+      return;
+    }
+    fn.call(this);
+  };
+ // 返回属性描述对象
+  return descriptor;
+};
+
+
+class User {
+  @check // 使用类方法装饰器
+  say() {
+    console.log('hi~');
+  }
+}
+
+class Cat {
+  @check // 使用类方法装饰器
+  say() {
+    console.log('hi~');
+  }
+}
+
+new User().say();// hi~
+new Cat().say();// method say must called by class User
+
+```
+
+上述使用的装饰器都是不接收参数的。如果需要接收参数,就再包装一层函数(利用了闭包)。
+
+```ts
+
+// auth是一个简单的权限装饰器,限定某方法只有管理员可执行
+const auth =
+  (isAdmin = false) =>
+    (target, key, descriptor: PropertyDescriptor) => {
+      const fn = descriptor.value;
+      descriptor.value = function () {
+        if (!isAdmin) {
+          console.error('no auth');
+          return;
+        }
+        fn.call(this);
+      };
+
+      return descriptor;
+    };
+
+class User {
+  @auth(true) // auth方法调用,返回一个类方法装饰器
+  edit() {
+    console.log('edit');
+  }
+}
+
+// auth入参为真值,打印 edit
+// 反之,打印 no auth
+new User().edit();
+
+```
+
+多个装饰器可以作用同一个目标对象.
+
+```ts
+
+class UserCtrl {
+
+  @auth(['admin'])// 鉴权
+  @get('/api/user/list') // 设置请求方法
+  listUser(){
+    // xxx
+  }
+ 
+}
+```
+
+
+
+
+## 业务场景
+
+一个比较经典的场景是借助反射和装饰器实现server端路由的自动装载。
+
+下面以一个koa项目为例,介绍下这部分功能的具体实现。
+
+
+### koa环境搭建
+
+1. 安装koa和koa-router `npm i koa koa-router`
+2. 安装koa相关类型声明 `npm i @types/koa @types/koa-router`
+3. 根目录src/app.js写入如下代码
+
+```ts
+
+import Koa from 'koa';
+import Router from 'koa-router';
+
+const app = new Koa();
+const router = new Router();
+router.get('/', ctx => {
+  ctx.body = 'hello';
+});
+app.use(router.routes());
+app.use(router.allowedMethods());
+
+app.listen(3000, () => {
+  console.log('run server...');
+});
+
+```
+
+5. 启动项目 `npm start`
+6. 可以浏览器打开 http://localhost:3000 端口测试一下
+
+
+### 预期效果
+
+上边的代码还没有做有优化,业务逻辑都耦合在一起。
+
+我们需要一个更为清晰,更可维护的代码组织方式。
+
+向下面这样:
+
+```ts
+
+@controller('/main')
+export default class MainCtrl {
+  @get('/index')
+  async index(ctx) {
+    ctx.body = 'hello world';
+  }
+  @get('/home')
+  async home(ctx) {
+    ctx.body = 'hello home';
+  }
+}
+
+// 我们希望上述代码等价于如下写法
+
+router.get('/main/index',ctx=>{
+   ctx.body = 'hello world';
+})
+router.get('/main/home',ctx=>{
+   ctx.body = 'hello home';
+})
+```
+
+### 实现思路
+
+我们的最终目标是拼出controller中包含的路由信息并完成注册,这其实是一个数据set和get的过程。
+
+通过装饰器在相应controller的原型对象上设置请求前缀和路由信息。
+
+然后遍历所有controller并实例化,借助反射获取到原型上存储的数据,完成路由注册。
+
+
+**装饰器decorator.ts**
+
+```ts
+export const controller =
+  (prefix = ''): ClassDecorator =>
+    (target: any) => {
+      target.prototype.prefix = prefix;
+    };
+
+type Method = 'get' | 'post' | 'delete' | 'options' | 'put' | 'head';
+
+export interface RouteDefinition {
+  path: string;
+  requestMethod: Method;
+  methodName: string;
+}
+
+const creatorFactory =
+  (requestMethod: Method) =>
+    (path: string): MethodDecorator =>
+      (target, name) => {
+        if (!Reflect.has(target.constructor, 'routes')) {
+          Reflect.defineProperty(target.constructor, 'routes', {
+            value: [],
+          });
+        }
+        const routes = Reflect.get(target.constructor, 'routes');
+        routes.push({
+          requestMethod,
+          path,
+          methodName: name,
+        });
+      };
+
+export const get = creatorFactory('get');
+// export const post = creatorFactory('post');
+// export const del = creatorFactory('delete');
+// export const put = creatorFactory('put');
+// export const options = creatorFactory('options');
+// export const head = creatorFactory('head');
+
+```
+
+**注册路由app.ts**
+
+```ts
+import Koa from 'koa';
+import Router from 'koa-router';
+import MainCtrl from './main-ctrl';
+const app = new Koa();
+const router = new Router();
+router.get('/', ctx => {
+  ctx.body = 'hello';
+});
+
+[MainCtrl].forEach(controller => {
+  const instance: any = new controller();
+  const { prefix } = instance;
+  const routes = Reflect.get(controller, 'routes');
+  routes.forEach(route => {
+    router[route.requestMethod](prefix + route.path, ctx => {
+      instance[route.methodName](ctx);
+    });
+  });
+});
+
+app.use(router.routes());
+app.use(router.allowedMethods());
+
+app.listen(3000, () => {
+  console.log('run server...');
+});
+
+
+```
+
+**控制器main-ctrl.ts**
+
+```ts
+import { controller, get } from './decorator';
+@controller('/main')
+export default class MainCtrl {
+  @get('/index')
+  async index(ctx) {
+    ctx.body = 'hello world';
+  }
+  @get('/home')
+  async home(ctx) {
+    ctx.body = 'hello home';
+  }
+}
+
+```
+
+### 自动扫描
+
+
+上述实现还存在一个弊端,如果控制器特别多,每次都需要手动导入,很麻烦。
+
+一种更优雅的方式是批量扫描,使用glob扫描指定的控制器目录(比如controllers)。
+
+1. 安装glob `npm i glob`
+2. 根目录新建load.ts,写入如下代码
+
+```ts
+import * as glob from 'glob';
+import path from 'path';
+export default (folder: string, router: any) => {
+  // 扫描指定文件夹下所有ts文件
+  glob.sync(path.join(folder, '**/*.ts')).forEach(item => {
+    // 加载controller
+    const controller = require(item).default;
+    // 实例化
+    const instance: any = new controller();
+    const { prefix } = instance;
+    const routes = Reflect.get(controller, 'routes');
+    routes.forEach(route => {
+      router[route.requestMethod](prefix + route.path, ctx => {
+        instance[route.methodName](ctx);
+      });
+    });
+  });
+};
+```
+3. 修改app.ts
+
+```ts
+import Koa from 'koa';
+import Router from 'koa-router';
+import path from 'path';
+import load from './load';
+const app = new Koa();
+const router = new Router();
+router.get('/', ctx => {
+  ctx.body = 'hello';
+});
+load(path.resolve(__dirname, './controllers'), router);
+app.use(router.routes());
+app.use(router.allowedMethods());
+app.listen(3000, () => {
+  console.log('run server...');
+});
+```
+4. 将之前的main-ctrl.ts移动到新建的controllers目录中
+5. 浏览器访问对应路径,测试
+
+
+## 源码地址
+
+[decorator](https://github.com/lengyuexin/code/blob/main/ts-server.zip)
+
+## 再会
+
+情如风雪无常,
+
+却是一动即殇。
+
+感谢你这么好看还来阅读我的文章,
+
+我是冷月心,下期再见。
