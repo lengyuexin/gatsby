@@ -1,0 +1,157 @@
+---
+title: '图数据库知多少'
+date: '2021-08-23'
+spoiler: 图数据库知多少
+---
+
+
+
+## 前言
+在字节内部，有一个自研的图数据库，叫做bytegrpah。
+
+刚好近期业务有用到，使用体验还是很棒的。
+
+不论是语法理解还是逻辑便捷性，在特定场景下，确实比关系型数据库更有优势。
+
+本文以bytegraph为例,介绍下图数据库的概念，落地场景以及基本使用。
+
+希望本文对你有所帮助。
+
+## 图数据库是什么
+顾名思义，图数据库也是数据库。这就意味着，它具有数据库的一些共性。比如事务，增删改查操作。
+
+不同于关系型数据库，它存储的是由点和边以及附加属性构成的逻辑关系。
+
+当这些逻辑关系连在一起时，就构成了一张图谱。
+
+这，就是图数据库。
+
+## 核心概念
+
+### 点
+一般来说，可以把点对应到关系型数据库中的表，其实就是一个实体(比如用户)。
+
+每一张表中存储的数据必然是相同结构，图数据中存储的同类型点也是如此。
+
+### 边
+两点之间建立关联指向的连线则为边，包含正向边，反向边和双向边。
+
+以关注关系为例:
+
+|  |  ||
+|--|--|--|
+|正向边  |反向边  |双向边|
+|A关注B(A->B)|B被A 关注(B <-A)| A与B互相关注(A<=>B)|
+
+### 属性
+图数据库的属性就如同关系型数据库中表的各个字段一样，只不过它附加在了点和边上。
+
+下面用一张图介绍下点，边，属性是如何建立关联的。
+
+![](https://img-blog.csdnimg.cn/50f114f7344e4162b0b0cbc407856854.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+- player,team是点
+- 两点中间的指向为边
+- id,name,age为点的属性，serve,start_year,end_year为边的属性
+
+## 通用概念
+
+**n跳查询:沿着指定链路查n次**
+
+  >查询A的关注，是一跳查询。查询A的关注中B的关注，是两跳查询。以此类推...
+
+**入边和出边：箭头起为出边，止为入边**
+
+> 对于上图中点player而言，边serve是出边；对于点team而言，边serve是入边。
+
+## 落地场景
+一句话，一旦你的业务场景存在图的关系，就有考虑图数据库的必要。
+
+比如抖音，微博的粉丝关注关系，这个就是经典的落地场景。
+
+人带有明显的社会属性，每个人都可以关注别人，也可以被其他人关注。
+
+当这种复杂的关注关系串联起来，其实就是一张图。
+
+在前端图谱展现上，可以配合g6使用，定制点边结构即可。
+![](https://img-blog.csdnimg.cn/e77c34c7a9ed4169b055d4728c1c71f3.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQyODEzNDkx,size_16,color_FFFFFF,t_70)
+
+
+## 基本使用
+
+在使用上，bytegraph采用germlin查询语言，可以把这个当成sql用。
+
+看似是学习一个新的东西，但成本不高，这个理解上比sql直观许多。
+
+下面来看几个常用操作吧。
+
+### 添加一个点
+在bytegraph中，使用id和type确定一个点，这个是可以自定义的。
+
+```
+  g.addV()
+  .property('id',A.id)
+  .property('type',A.type)
+  .property('name',A.name)
+```
+
+### 建立一条边
+很好理解的form和to，在给定的A,B两点之间建立边的指向。
+
+边的名字unit也是可以自定义的，比如follow。
+
+```
+g.addE('unit').from(A.id,A.type).to(B.id,B.type)
+```
+
+### 查询某个点的属性
+类似mysql中的`select name from A`
+
+```
+g.V().has("id", A.id).has("type", A.type).properties("name")
+```
+
+### 查询某个点的出边和入边
+假定该边名为unit。
+```
+g.V().has('id', A.id).has('type',A.type).bothE('unit')`;
+```
+
+### 清除某个点的出入边
+一般来说，点不会被删，最多删除点的属性。
+
+
+如果要清除点之间的联系，去掉其出入边即可。
+
+```
+g.V().has('id',A.id).has('type',A.type).bothE('unit').drop()
+```
+
+###  A所在关注关系联通子图上的所有人
+这个应该是最为经典的使用了，查询所有关联，最高跳查询。
+
+```
+g.V().has("id", A.id).has("type", A.type)
+ .repeat(             // repeat()表示表示迭代从A找关注or被关注的人
+        both("follow")
+        .simplePath()) // simplePath()是过滤条件，出现环则过滤掉
+ .emit()    // emit()表示输出每个遍历到的点，
+ .times(10)  //times(10)设置一个足够大的循环次数，当循环找不到新的点时，repeat会自动结束
+```
+
+
+## 更多
+更多bytegraph介绍：[字节跳动自研万亿级图数据库 & 图计算实践](https://blog.csdn.net/ByteDanceTech/article/details/104509642/)
+
+更多gremlin语法介绍: [Gremlin中文文档](http://tinkerpop-gremlin.cn/)
+
+
+## 再会
+
+情如风雪无常,
+
+却是一动即殇。
+
+感谢你这么好看还来阅读我的文章,
+
+我是冷月心,下期再见。
+
