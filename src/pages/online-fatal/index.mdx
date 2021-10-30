@@ -1,0 +1,120 @@
+---
+title: '一行代码导致的线上cpu被占满，我好慌！'
+date: '2021-10-24'
+spoiler: '一行代码导致的线上cpu被占满，我好慌！'
+---
+
+
+
+##  背景
+近期开发的模块上线后，测试过程中发现了一个bad case。
+
+前端调用了一个查询服务接口，然后整个服务cpu 立即飙升到100%，甚至以上。
+
+这直接导致线上服务处于瘫痪状态，一群oncall就干过来了，好慌。
+
+![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/3144d6c798f14e0c85c7b4cd3fcc1a6e~tplv-k3u1fbpfcp-zoom-1.image)
+
+## 成因
+
+根本原因是调用了lodash的uniqWith和isEqual方法对**大数据量**且**重复率不高的数据**进行深度去重。
+
+github上也有一个相关的[issue.](https://github.com/lodash/lodash/issues/5254)
+
+
+![image.png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/defd2c10c1b84546ab159ae1c3e5e6c6~tplv-k3u1fbpfcp-watermark.image?)
+
+
+```js
+import {uniqWith, isEqual} from 'lodash'
+// example
+const objects = [ 
+{ x: 1, y: 2 }, 
+{ x: 2, y: 1 },
+{ x: 1, y: 2 },
+]; 
+
+uniqWith(objects, isEqual); 
+// => [{ 'x': 1, 'y': 2 }, { 'x': 2, 'y': 1 }]
+```
+在 uniqWith 中，调用了isEqual进行两两比较。
+
+```
+isEqual(objects[0], objects[1])
+isEqual(objects[0], objects[2])
+isEqual(objects[1], objects[2])
+```
+线上数据高达5w,但并不足以说明是数量级导致的。
+
+还有一个重要因素会增加比对耗时，**重复率**。
+
+如果重复率极低，几万的数量，还不足以让cpu占满。
+
+
+```js
+ function test(){
+   const obj = {
+      x: 1,
+      y: 2,
+    };
+    const arr = [];
+    for (let i = 0; i < 50000; i++) {
+      arr.push(obj);
+    }
+    return lodash.uniqWith(arr, lodash.isEqual);
+  }
+    console.time('重复率测试');
+    test();
+    console.timeEnd('重复率测试');
+    // 重复率测试: 4.779ms
+```
+
+
+## 复现demo
+
+为了更直观的感受这个过程，我写了如下示例代码。仅有几行，但足以复现。
+
+```js
+const { uniqWith, isEqual } = require('lodash');
+const http = require('http');
+http
+  .createServer(async (req, res) => {
+    const arr = [];
+    for (let i = 0; i < 10000; i++) {
+      arr.push({
+        n: Math.random() * 20000,
+        m: Math.random() * 20000,
+      });
+    }
+    console.log(uniqWith(arr, isEqual));
+    res.end('hello world');
+  })
+  .listen(3000);
+
+```
+
+node执行完上述代码后，可在终端使用**top**命令观察cpu占用情况。
+
+
+## 解决方案
+
+最直接的方案是放弃uniqWith和isEqual。
+
+需要进一步思考的点有三个：
+
+1. 如此庞大的数据量是否合理？
+2. 既然重复率如此低，近乎没有重复，是否有去重必要？
+3. 能否从数据源头上控制不出现重复数据？哪怕重复的只有一两条。
+
+
+结合我经历的这个场景，排查完业务逻辑后发现真实数据量不会这么大，重复的数据很少，且可以从源头上控制。
+
+## 再会
+
+情如风雪无常,
+
+却是一动即殇。
+
+感谢你这么好看还来阅读我的文章,
+
+我是冷月心,下期再见。
